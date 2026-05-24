@@ -1,6 +1,8 @@
 import sys
 import typing
 import random
+
+
 class Deneme():
     def parsing(self) -> dict[str, str]:
         file_name: str = sys.argv[1]
@@ -27,25 +29,28 @@ class Cell():
         self.wall = wall
         self.coordinate: tuple[int, int] = (x_coord, y_coord)
         if wall >= 8:
-            self.wall_info[3] = 1  # west
+            self.wall_info[3] = 1
+            # west
             wall -= 8
         else:
             self.nowall.add("WEST")
         if wall >= 4:
-            self.wall_info[2] = 1  # south
+            self.wall_info[2] = 1
+            # south
             wall -= 4
         else:
             self.nowall.add("SOUTH")
         if wall >= 2:
-            self.wall_info[1] = 1  # east
+            self.wall_info[1] = 1
+            # east
             wall -= 2
         else:
             self.nowall.add("EAST")
         if wall == 1:
-            self.wall_info[0] = 1  # north
+            self.wall_info[0] = 1
+            # north
         else:
             self.nowall.add("NORTH")
-
 
 
 class Maze():
@@ -65,17 +70,19 @@ class Maze():
         self.solve: set[Cell] = set()
 
     def ft_write(self):
-        a: int = (self.width - 7 ) / 2
+        a: int = (self.width - 7) / 2
         b: int = (self.height - 5) / 2
-        filled: Cell = (a, b, 15)
-        coord:list[tuple[int, int]] = [(0,0), (0, -1), (0, -2), (1, -2),
-        (2, -2), (2, -3), (2, -4), (6, -4), (5, -4), (4, -4), (4, -3),
-        (4, -2), (5, -2), (6, -2), (6, -1), (6, 0), (5, 0), (4, 0)]
+        filled = Cell(a, b, 15)
+        coord: list[tuple[int, int]] = [(0, 0), (0, -1), (0, -2), (1, -2),
+                                        (2, -2), (2, -3), (2, -4), (6, -4),
+                                        (5, -4), (4, -4), (4, -3), (4, -2),
+                                        (5, -2), (6, -2), (6, -1), (6, 0),
+                                        (5, 0), (4, 0)]
         for (x, y) in coord:
-            filled: Cell = (a+x, b+y, 15)
+            filled = Cell(a+x, b+y, 15)
             self.ft_cell += filled
 
-    def random_broker(self, x: int, y:int):
+    def random_broker(self, x: int, y: int):
         wallnbr: int = random.randint(0, 14)
         broken_cell = Cell(x, y, wallnbr)
         self.grid[x][y] = broken_cell
@@ -87,17 +94,16 @@ class Maze():
                 if "SOUTH" not in temp_cell.nowall:
                     if temp_cell not in self.ft_cell:
                         temp_cell.nowall.add("SOUTH")
-                        temp_cell.wall += 4
+                        temp_cell.wall -= 4
                         temp_cell.wall_info[2] = 0
-                        self.grid[x][y-1] = temp_cell
+                        self.grid[x][y+1] = temp_cell
             else:
                 broken_cell.nowall.discard("NORTH")
                 broken_cell.wall_info[0] = 1
-                broken_cell.wall +=1
-
+                broken_cell.wall += 1
 
         if "SOUTH" in broken_cell.nowall and y < self.height - 1:
-            temp_cell = self.grid[x][y+1]
+            temp_cell = self.grid[x][y-1]
             if "NORTH" not in temp_cell.nowall:
                 temp_cell.nowall.add("NORTH")
                 temp_cell.wall -= 1
@@ -115,18 +121,16 @@ class Maze():
                 temp_cell.wall -= 2
                 temp_cell.wall_info[1] = 0
 
-
     def choose_next_cell(self, curr_x: int, curr_y: int) -> tuple[int, int]:
         direction = random.choice(list(self.grid[curr_x][curr_y].nowall))
         if direction == "NORTH":
-            return[curr_x][curr_y + 1]
+            return [curr_x][curr_y + 1]
         if direction == "SOUTH":
-            return[curr_x][curr_y - 1]
+            return [curr_x][curr_y - 1]
         if direction == "EAST":
-            return[curr_x + 1][curr_y]
+            return [curr_x + 1][curr_y]
         if direction == "WEST":
-            return[curr_x - 1][curr_y]
-
+            return [curr_x - 1][curr_y]
 
     def brokeforsolve(self):
         parser = Deneme()
@@ -135,81 +139,128 @@ class Maze():
         entry_parse: list[int] = entry.split(',')
 
 
-def find_shortest_way(self, start tuple[int, int], end tuple[int, int])
-    line = [[start]] #yolları biriktirdiğimiz liste, start ile baslıyor
-	visited = {start} #gittiğim yerleri kaydediyorum, aynı yerde dönüp durmamak için, küme yani set olarak kaydediyorum
+def find_shortest_way(self, start: tuple[int, int],
+                      end: tuple[int, int]) -> list[list[Cell]]:
+    line = [[start]]
+    # yolları biriktirdiğimiz liste, start ile baslıyor
+    start_to_finish: list[list[Cell]] = []
 
-	moves = {
-		"NORTH" : (0, -1), "SOUTH": (0, 1), "EAST" : (1, 0), "WEST": (-1, 0)
-	}
+    moves = {
+        "NORTH": (0, -1), "SOUTH": (0, 1), "EAST": (1, 0), "WEST": (-1, 0)
+    }
 
-	while line: #yol bitene kadar çalış
-		path = line.pop(0)  #0. indeksteki elemanı getiriyor. artık listeye dahil değil
-		current = path[-1] #-1. indeks son eleman demek oluyor.
+    while line:
+        # yol bitene kadar çalış
+        path = line.pop(0)
+        # 0. indeksteki elemanı get. artık listede değil
+        current = path[-1]
+        # -1. indeks son eleman demek oluyor.
 
-		if current == end: #çıkısa geldim mi dye kontrol ediyorum
-			return path; # geldiysem dönguyu bitiriyorum
+        if current == end:
+            # çıkısa geldim mi dye kontrol ediyorum
+            start_to_finish.append(path)
+            continue
+            # geldiysem dönguyu bitiriyorum
 
-		curr_x, curr_y = current;
-		curent_cell = self.grid[cur_x][curr_y] #selfgrid üzerinden hücrenin bilgilerini çekiyorum
+        curr_x, curr_y = current
+        current_cell = self.grid[curr_x][curr_y]
 
-		for direction in current_cell.nowall: #o hücrenin açık olan her yönüne bak
+        # selfgrid üzerinden hücrenin bilgilerini çekiyorum
 
-			dx, dy = moves[direction] #yönü koordinat olarak harekete çeviriyorum. mesela SOUTH ise (0,1) olacak.
-			next_coord= (curr_x + dx, curr_y + dy) #gitmek istediğimiz koordinatı oluştruduk
+        for direction in current_cell.nowall:
+            # o hücrenin açık olan her yönüne bak
 
-			if 0 <= next_coord[0] < self.width and 0 <= next_coord[1] < self.height: #labirentin sınırlarını aştım mı diye bakıyorum
-				if next_coord not in visited:  #eğer o hücreye daha önce uğramadıysam
-					visited.add(next_coord) #bu hücreye uğradığımı kaydettim
-					new_path = list(path) #mecvut koordinatı kaydettim
-					new_path.append(next_coord) #bir sonraki koordinatı listeye ekledim
-					line.append(new_path) #yola kooridnatı kaydettim.
-			return
+            dx, dy = moves[direction]
+            # yönü koordinat olarak harekete çeviriyorum.
+            next_coord = (curr_x + dx, curr_y + dy)
+            # gitmek istediğimiz koordinatı oluştruduk
 
-def perfect_maker(self, start: tuple[int, int], end: tuple[int, int]): #başka yol var mi diye bakıyorum
-	shortest_path = self.find_shortest_way(start, end) #en kısa yolu bana verdi.
-	if not shortest_path: #yol yoksa çıktım, error da dondurebiliriz
-		return
-
-	path_set = set(shortest_path) #yolu kümelere çevirdim.
-
-	for x in range(self.width) # tüm satırları dolas
-		for y in range(self.height) #tüm kolonları dolas
-		current_coord = (x, y) # bulunduğun hucrenin koordinatını cek
-		cell = self.grid(x, y) #o hücrenin bilgilerini çek (sanırım nesne muhabetti bu oluyor)
-		directions_to_close= [] #duvar örülecek yönler
-
-		for direction in list(cell.nowall): #açık tüm kapılara bakıyoru
-			if direction == "NORTH": # eğer kapı açık ise
-				 next_coord = (x, y-1) # bir sonraki hücre için koordinatı revize ediyoruz.
-			if direction == "SOUTH":
-				next_coord = (x, y +1)
-			if direction == "EAST":
-				next_coord = (x + 1, y)
-			if direction == "WEST"
-				next_coord = (x -1 , y)
-
-			if next_coord not in path_set: #galiba burda patladim
-				directions_to_close.append(direction, next_coord)
+            if 0 <= next_coord[0] < self.width:
+                if 0 <= next_coord[1] < self.height:
+                    # labirentin sınırlarını aştım mı diye bakıyorum
+                    if next_coord not in path:
+                        # eğer o hücreye daha önce uğramadıysam
+                        new_path = list(path)
+                        # mecvut koordinatı kaydettim
+                        new_path.append(next_coord)
+                        # bir sonraki koordinatı listeye ekledim
+                        line.append(new_path)
+                        # yeni yolu yol listesinde kaydettim.
+    return start_to_finish
 
 
-def perfect_maker(self, start: tuple[int, int], end: tuple[int, int]): #başka yol var mi diye bakıyorum
-	all_paths = [] #tüm yolları depolayalım
-	visited = set ()
+def perfect_maker(self, start: tuple[int, int], end: tuple[int, int]):
+    # başka yol var mi diye bakıyorum
+    shortest_path = self.find_shortest_way(start, end)
+    # en kısa yolu bana verdi.
+    if not shortest_path:
+        # yol yoksa çıktım, error da dondurebiliriz
+        return
 
-	def find_all_paths(current, target, current_path):
-		if curren == target:
-			all_paths.append(list(current_path))
-			return
-		visited.add(current)
-		curr_x, curr_y = current
-		current_cell = self.grid[curr_x][curr_y]
+    path_set = set(shortest_path)
+    # yolu kümelere çevirdim.
+
+    for x in range(self.width):
+        # tüm satırları dolas
+        for y in range(self.height):
+            # tüm kolonları dolas
+            current_coord = (x, y)
+            # bulunduğun hucrenin koordinatını cek
+            cell = self.grid(x, y)
+            # o hücrenin bilgilerini çek (sanırım nesne muhabetti bu oluyor)
+            directions_to_close = []
+            # duvar örülecek yönler
+
+        for direction in list(cell.nowall):
+            # açık tüm kapılara bakıyoru
+            if direction == "NORTH":
+                # eğer kapı açık ise
+                next_coord = (x, y-1)
+                # bir sonraki hücre için koordinatı revize ediyoruz.
+            if direction == "SOUTH":
+                next_coord = (x, y+1)
+            if direction == "EAST":
+                next_coord = (x + 1, y)
+            if direction == "WEST":
+                next_coord = (x-1, y)
+
+            if next_coord not in path_set:
+                # galiba burda patladim
+                directions_to_close.append(direction, next_coord)
+
+
+def perfect_maker(self, start: tuple[int, int], end: tuple[int, int]):
+    # başka yol var mi diye bakıyorum
+    all_paths = []
+    # tüm yolları depolayalım
+    visited = set()
+    # ziyaret edilen hücreler
+
+    def find_all_paths(current, target, current_path):
+        if current == target:
+            # çıkışa geldiysem
+            all_paths.append(list(current_path))
+            # tüm yolları kaydet
+            return
+        visited.add(current)
+        # ziyaret ettikçe ekle
+        curr_x, curr_y = current
+        current_cell = self.grid[curr_x][curr_y]
+        # current hücrenin kooridnatlarını aldım
+
+        moves = {  # hareketlerin koordinatlarını öğrettim.
+            "NORTH:": (curr_x, curr_y - 1), "SOUTH": (curr_x, curr_y + 1),
+            "EAST": (curr_x + 1, curr_y), "WEST": (curr_x - 1, curr_y)
+        }
+
+        for direction in current_cell.nowall:
+            pass
 
 
 
 # DFS ile olası tüm çözüm yollarını bul
-# Yolları uzunluklarına göre sırala
+# Yolları uzunluklarına göre sırala (uzunluklarına göre değil de, kaydedilen yol harici yollar)
 # Diğer yolları perfect yoldan kopar
-# 2. yolla birlikte koparmaya başla, 2. yoldan giderken perfect yolun dışına çıktığı ilk kareyi bul
+# 2. yolla birlikte koparmaya başla, 2. yoldan giderken perfect yolun dışına çıktığı ilk hücreyi bul
 # Ayrıştığı yeri bulunca duvar ör. Simetrik diger hücrenin de duvarını ör.
 
