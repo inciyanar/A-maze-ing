@@ -1,27 +1,4 @@
-import sys
-import typing
 import random
-
-
-class Deneme():
-    def parsing(self) -> dict[str, str]:
-        file_name: str = sys.argv[1]
-        file: typing.TextIO = open(file_name, 'r')
-        data: str = file.read()
-        lines: list[str] = data.splitlines()
-        i = 0
-        okito: dict[str, str] = {}
-        for item in lines:
-            splversion = item.split('=')
-            okito[splversion[0]] = splversion[1]
-            i += 1
-        i = 0
-
-        for key, value in okito.items():
-            print(f"{key}: {value}")
-        return okito
-
-
 class Cell():
     def __init__(self, x_coord: int, y_coord: int, wall):
         self.wall_info: list[int] = [0, 0, 0, 0]
@@ -46,11 +23,17 @@ class Cell():
             wall -= 2
         else:
             self.nowall.add("EAST")
-        if wall == 1:
+        if wall >= 1:
             self.wall_info[0] = 1
             # north
         else:
             self.nowall.add("NORTH")
+
+    def __eq__(self, other):
+            if isinstance(other, tuple):
+                return self.coordinate == other
+            return False
+
 
 
 class Maze():
@@ -83,75 +66,66 @@ class Maze():
             self.ft_cell.append(filled)
 
     def random_broker(self, x: int, y: int):
+        # 0 ile 14 arası rastgele kırılmış yeni bir hücre üretiyoruz
         wallnbr: int = random.randint(0, 14)
         broken_cell = Cell(x, y, wallnbr)
         self.grid[x][y] = broken_cell
-        temp_cell: Cell
 
-        if "NORTH" in broken_cell.nowall:
+        # NORTH Kontrolü (Yukarıdaki komşunun SOUTH duvarını yık)
+        if "NORTH" in broken_cell.nowall and y < self.height - 1:
             temp_cell = self.grid[x][y+1]
             if temp_cell not in self.ft_cell:
-                if "SOUTH" not in temp_cell.nowall:
-                    if temp_cell not in self.ft_cell:
-                        temp_cell.nowall.add("SOUTH")
-                        temp_cell.wall -= 4
-                        temp_cell.wall_info[2] = 0
-                        self.grid[x][y+1] = temp_cell
+                temp_cell.nowall.add("SOUTH")
+                temp_cell.wall_info[2] = 0  # Karşı hücrenin Güney duvarını indir
             else:
                 broken_cell.nowall.discard("NORTH")
                 broken_cell.wall_info[0] = 1
-                broken_cell.wall += 1
 
-        if "SOUTH" in broken_cell.nowall and y < self.height - 1:
+        # SOUTH Kontrolü (Aşağıdaki komşunun NORTH duvarını yık) -> dürüst sınır kontrolü y > 0
+        if "SOUTH" in broken_cell.nowall and y > 0:
             temp_cell = self.grid[x][y-1]
             if temp_cell not in self.ft_cell:
-                if "NORTH" not in temp_cell.nowall:
-                    temp_cell.nowall.add("NORTH")
-                    temp_cell.wall -= 1
-                    temp_cell.wall_info[0] = 0
+                temp_cell.nowall.add("NORTH")
+                temp_cell.wall_info[0] = 0  # Karşı hücrenin Kuzey duvarını indir
             else:
                 broken_cell.nowall.discard("SOUTH")
                 broken_cell.wall_info[2] = 1
-                broken_cell.wall += 4
+
+        # EAST Kontrolü (Sağdaki komşunun WEST duvarını yık)
         if "EAST" in broken_cell.nowall and x < self.width - 1:
             temp_cell = self.grid[x+1][y]
             if temp_cell not in self.ft_cell:
-                if "WEST" not in temp_cell.nowall:
-                    temp_cell.nowall.add("WEST")
-                    temp_cell.wall -= 8
-                    temp_cell.wall_info[3] = 0
+                temp_cell.nowall.add("WEST")
+                temp_cell.wall_info[3] = 0  # Karşı hücrenin Batı duvarını indir
             else:
                 broken_cell.nowall.discard("EAST")
-                broken_cell.wall_info[3] = 1
-                broken_cell.wall += 8
+                broken_cell.wall_info[1] = 1
+
+        # WEST Kontrolü (Soldaki komşunun EAST duvarını yık)
         if "WEST" in broken_cell.nowall and x > 0:
             temp_cell = self.grid[x-1][y]
             if temp_cell not in self.ft_cell:
-                if "EAST" not in temp_cell.nowall:
-                    temp_cell.nowall.add("EAST")
-                    temp_cell.wall -= 2
-                    temp_cell.wall_info[1] = 0
-                else:
-                    broken_cell.nowall.discard("WEST")
-                    broken_cell.wall_info[1] = 1
-                    broken_cell.wall += 2
+                temp_cell.nowall.add("EAST")
+                temp_cell.wall_info[1] = 0  # Karşı hücrenin Doğu duvarını indir
+            else:
+                broken_cell.nowall.discard("WEST")
+                broken_cell.wall_info[3] = 1
+    # def choose_next_cell(self, curr_x: int, curr_y: int) -> tuple[int, int]:
+    #     direction = random.choice(list(self.grid[curr_x][curr_y].nowall))
+    #     if direction == "NORTH":
+    #         return [curr_x][curr_y + 1]
+    #     if direction == "SOUTH":
+    #         return [curr_x][curr_y - 1]
+    #     if direction == "EAST":
+    #         return [curr_x + 1][curr_y]
+    #     if direction == "WEST":
+    #         return [curr_x - 1][curr_y]
 
-    def choose_next_cell(self, curr_x: int, curr_y: int) -> tuple[int, int]:
-        direction = random.choice(list(self.grid[curr_x][curr_y].nowall))
-        if direction == "NORTH":
-            return [curr_x][curr_y + 1]
-        if direction == "SOUTH":
-            return [curr_x][curr_y - 1]
-        if direction == "EAST":
-            return [curr_x + 1][curr_y]
-        if direction == "WEST":
-            return [curr_x - 1][curr_y]
-
-    def brokeforsolve(self):
-        parser = Deneme()
-        info = parser.parsing()
-        entry = info["ENTRY"]
-        entry_parse: list[int] = entry.split(',')
+    # def brokeforsolve(self):
+    #     parser = Deneme()
+    #     info = parser.parsing()
+    #     entry = info["ENTRY"]
+    #     entry_parse: list[int] = entry.split(',')
 
     def build_wall_between(self, cell1_coord: tuple[int, int], cell2_coord: tuple[int, int]):
         x1, y1 = cell1_coord
@@ -298,30 +272,43 @@ class Maze():
         return False
     
 
-    def draw_maze(self):
+    def draw_maze(self, start: tuple[int, int], end: tuple[int, int]):
             """
-            Labirenti terminal ekranında karakterler kullanarak görsel olarak çizer.
+            Labirenti çizer ve bulduğu tek çözüm yolunu ' . ' karakterleriyle haritaya işler.
             """
-            print("\n=== GÖRSEL LABİRENT HARİTASI ===")
+            # Son kalan tek çözümü hesapla
+            all_paths = self.find_solution_ways(start, end)
+            solution_set = set(all_paths[0]) if all_paths else set()
+
+            print("\n=== ÇÖZÜM YOLU GÖSTERİLEN LABİRENT ===")
             for y in reversed(range(self.height)):
-                # 1. Kuzey duvarlarını çiz
+                # 1. Satır: Kuzey Duvarları
                 top_line = ""
                 for x in range(self.width):
                     cell = self.grid[x][y]
-                    # Eğer kuzeyde duvar varsa "+---", yoksa "+   " çiz
                     top_line += "+---" if cell.wall_info[0] == 1 else "+   "
                 print(top_line + "+")
 
-                # 2. Batı/Doğu duvarlarını ve hücre boşluklarını çiz
+                # 2. Satır: İç Boşluklar / Hücre Merkezleri ve Yan Duvarlar
                 mid_line = ""
                 for x in range(self.width):
                     cell = self.grid[x][y]
-                    # Eğer batıda duvar varsa "|   ", yoksa "    " çiz
-                    mid_line += "|   " if cell.wall_info[3] == 1 else "    "
-                # En sağ sınır duvarı
+                    # Sol duvar kontrolü
+                    left_wall = "| " if cell.wall_info[3] == 1 else "  "
+                    
+                    # Hücre merkezinin ne olacağını belirle
+                    if cell.coordinate == start:
+                        center = "S"  # Start noktası
+                    elif cell.coordinate == end:
+                        center = "E"  # End noktası
+                    elif cell.coordinate in solution_set:
+                        center = "."  # Çözüm yolu patikası
+                    else:
+                        center = " "  # Boş koridor
+                    
+                    mid_line += left_wall + center + " "
                 print(mid_line + "|")
-            
-            # En alt taban çizgisi
+                
             print("+---" * self.width + "+")
 
 # burdan sonra current_cell ve next_xell duvarlarının örülmesi gerek
@@ -332,3 +319,25 @@ class Maze():
 # Diğer yolları perfect yoldan kopar
 # 2. yolla birlikte koparmaya başla, 2. yoldan giderken perfect yolun dışına çıktığı ilk hücreyi bul
 # Ayrıştığı yeri bulunca duvar ör. Simetrik diger hücrenin de duvarını ör.
+
+
+# Labirent nesnesini oluştur (Örn: 15x15)
+maze = Maze(5, 5)
+
+# 1. Aşama: Hücreleri random_broker ile rastgele kır
+for x in range(maze.width):
+    for y in range(maze.height):
+        maze.random_broker(x, y)
+
+# Başlangıç ve bitiş koordinatları
+start_point = (0, 0)
+end_point = (4, 4)
+
+# 2. Aşama: Yapay zekanın ısrar ettiği o meşhur while döngüsü :)
+print("Alternatif yollar kapatılıyor, labirent kusursuzlaştırılıyor...")
+while maze.perfect_maker(start_point, end_point):
+    pass  # perfect_maker True döndüğü sürece döngü devam edecek
+
+print("Tebrikler! Tek çözümlü (Kusursuz) haritanız başarıyla üretildi!")
+
+maze.draw_maze(start_point, end_point)
