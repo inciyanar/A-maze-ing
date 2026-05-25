@@ -146,7 +146,7 @@ def find_shortest_way(self, start: tuple[int, int],
     start_to_finish: list[list[Cell]] = []
 
     moves = {
-        "NORTH": (0, -1), "SOUTH": (0, 1), "EAST": (1, 0), "WEST": (-1, 0)
+        "NORTH": (0, 1), "SOUTH": (0, -1), "EAST": (1, 0), "WEST": (-1, 0)
     }
 
     while line:
@@ -190,72 +190,40 @@ def find_shortest_way(self, start: tuple[int, int],
 
 
 def perfect_maker(self, start: tuple[int, int], end: tuple[int, int]):
-    # başka yol var mi diye bakıyorum
-    shortest_path = self.find_shortest_way(start, end)
-    # en kısa yolu bana verdi.
-    if not shortest_path:
-        # yol yoksa çıktım, error da dondurebiliriz
+    # başka yol varsa kapatiyorum
+    all_paths = self.find_shortest_ways(start, end)  # tüm yolları depolayalım
+
+    if len(all_paths) <= 1:  # birden fazla yol varsa fonk içine gir
         return
 
-    path_set = set(shortest_path)
-    # yolu kümelere çevirdim.
+    all_paths(key=len)  #en kısa olandan uzun olana sıraladı
+    main_path = all_paths[0]  # en kısa olana ana yol dedim
+    main_path_set = set(main_path)  # kümeye çevirdim
 
-    for x in range(self.width):
-        # tüm satırları dolas
-        for y in range(self.height):
-            # tüm kolonları dolas
-            current_coord = (x, y)
-            # bulunduğun hucrenin koordinatını cek
-            cell = self.grid(x, y)
-            # o hücrenin bilgilerini çek (sanırım nesne muhabetti bu oluyor)
-            directions_to_close = []
-            # duvar örülecek yönler
+    moves = {
+        "NORTH": (0, 1), "SOUTH": (0, -1), "EAST": (1, 0), "WEST": (-1, 0)
+    }
 
-        for direction in list(cell.nowall):
-            # açık tüm kapılara bakıyoru
-            if direction == "NORTH":
-                # eğer kapı açık ise
-                next_coord = (x, y-1)
-                # bir sonraki hücre için koordinatı revize ediyoruz.
-            if direction == "SOUTH":
-                next_coord = (x, y+1)
-            if direction == "EAST":
-                next_coord = (x + 1, y)
-            if direction == "WEST":
-                next_coord = (x-1, y)
+    for path in all_paths[1:]:  # 1. indeksteki yoldan başlıyruz
 
-            if next_coord not in path_set:
-                # galiba burda patladim
-                directions_to_close.append(direction, next_coord)
+        for i in range(len(path) - 1):  # alt. yol ilk yoldan ne zaman kopar
+            # sonrakini de kontrol ettiğim için -1 tasmasın diye
+            curr_cell = path[i]
+            next_cell = path[i+1]
 
+            if curr_cell in main_path_set and next_cell not in main_path_set:
+                # su anki hücre ana yolda varsa ama sonraki yolda degilse dur
+                curr_x, curr_y = curr_cell # hücrelerin koordinatları aldık
+                next_x, next_y = next_cell
 
-def perfect_maker(self, start: tuple[int, int], end: tuple[int, int]):
-    # başka yol var mi diye bakıyorum
-    all_paths = []
-    # tüm yolları depolayalım
-    visited = set()
-    # ziyaret edilen hücreler
+                for d, (dx, dy) in moves():  #hangi yönde farklılk olduğunu ara
+                    if curr_x + dx == next_x and curr_y + dy == next_y:
+                        target_direction = d
+                        break
+                if target_direction: # bulduysam o hücreyi çekiyoruz
+                    current_cell = self.grid[curr_x][curr_y]
 
-    def find_all_paths(current, target, current_path):
-        if current == target:
-            # çıkışa geldiysem
-            all_paths.append(list(current_path))
-            # tüm yolları kaydet
-            return
-        visited.add(current)
-        # ziyaret ettikçe ekle
-        curr_x, curr_y = current
-        current_cell = self.grid[curr_x][curr_y]
-        # current hücrenin kooridnatlarını aldım
-
-        moves = {  # hareketlerin koordinatlarını öğrettim.
-            "NORTH:": (curr_x, curr_y - 1), "SOUTH": (curr_x, curr_y + 1),
-            "EAST": (curr_x + 1, curr_y), "WEST": (curr_x - 1, curr_y)
-        }
-
-        for direction in current_cell.nowall:
-            pass
-
+#burdan sonra current_cell ve next_xell duvarlarının örülmesi gerek
 
 
 # DFS ile olası tüm çözüm yollarını bul
