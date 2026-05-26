@@ -1,5 +1,5 @@
 import random
-
+import pars_ing
 
 class Cell:
     def __init__(self, x: int, y: int):
@@ -7,13 +7,8 @@ class Cell:
         self.y = y
         self.coordinate = (x, y)
         
-        # 🎯 OTOMATİK KAPALI BAŞLANGIÇ: Her hücre doğarken dört tarafı duvarla kaplı (1) doğar.
-        self.walls = {
-            "NORTH": 1,
-            "EAST": 1,
-            "SOUTH": 1,
-            "WEST": 1
-        }
+        #  OTOMATİK KAPALI BAŞLANGIÇ: Her hücre doğarken dört tarafı duvarla kaplı (1) doğar.
+        self.walls = {"NORTH": 1, "EAST": 1, "SOUTH": 1, "WEST": 1}
 
     @property
     def wallnbr(self) -> int:
@@ -25,7 +20,7 @@ class Cell:
 
     def get_hex_value(self) -> str:
         """Hexadecimal çıktı için her an güncel canlı sayıyı kullanır."""
-        return hex(self.wallnbr)[2:].upper()
+        return hex(self.wallnbr).upper()
 
 
 class Maze():
@@ -42,7 +37,7 @@ class Maze():
                 current_column.append(mazecell)
             self.grid.append(current_column)
 
-    def ft_write(self):
+    def ft_write(self) -> None:
         if self.width >= 9 and self.height >= 7:
             a: int = (self.width - 7) / 2
             b: int = (self.height - 5) / 2
@@ -56,7 +51,8 @@ class Maze():
                 filled = Cell(a+x, b+y, 15)
                 self.ft_cell.append(filled)
 
-    def destroy_wall_between(self, cell1_coord: tuple[int, int], cell2_coord: tuple[int, int]):
+    def destroy_wall_between(self, cell1_coord: tuple[int, int],
+                             cell2_coord: tuple[int, int]) -> None:
             """İki hücre arasındaki duvarı ÇİFT TARAFLI olarak kalıcıca yıkar (0 yapar)."""
             x1, y1 = cell1_coord
             x2, y2 = cell2_coord
@@ -107,7 +103,8 @@ class Maze():
         return False
         # burada da duvarları açmış olduk aslında
 
-    def create_guaranteed_path(self, start: tuple[int, int], end: tuple[int, int]) -> list[tuple[int, int]]:
+    def create_guaranteed_path(self, start: tuple[int, int],
+                               end: tuple[int, int]) -> list[tuple[int, int]]:
             """
             START'tan END'e kadar rastgele yol oluşturan fonksiyon
             """
@@ -155,7 +152,7 @@ class Maze():
                         
             return path
 
-    def random_broker(self, break_count: int = 2):
+    def random_broker(self, break_count: int = 2) -> None:
         """
         Haritadaki her iç hücre için belirlenen adet (break_count) kadar 
         rastgele iç duvarı yıkar. Dış sınır duvarlarına (ft_cell) asla dokunmaz.
@@ -227,7 +224,8 @@ class Maze():
                                     # yeni yolu yol listesinde kaydettim.
         return start_to_finish
 
-    def perfect_maker(self, start: tuple[int, int], end: tuple[int, int]) -> bool:
+    def perfect_maker(self, start: tuple[int, int],
+                      end: tuple[int, int]) -> bool:
         # başka yol varsa kapatiyorum
         all_paths = self.find_solution_ways(start, end)  # tüm yolları depolayalım
 
