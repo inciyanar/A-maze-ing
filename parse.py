@@ -82,7 +82,30 @@ class Maze():
             filled = Cell(a+x, b+y, 15)
             self.ft_cell.append(filled)
 
+  # 3x3 luk bos alan var mi dyie bakıyorum
+    def chechker_3x3(self, start_x: int, start_y: int) -> bool:
+    # bu if blokunu nasıl kısaltacagımı bilmiyorum :()
+        if start_x < 0 or start_y < 0 or start_x + 2 >= self.width or start_y + 2 >= self.height:
+            return False  # burada dış sınırlara taşıyor mu diye baktım
+
+        for i in range (3):  # tüm 3x3 luk alanı gezmek için dongu
+            for j in range (3):
+                curr_cell = self.grid[start_x + i],[ start_y + j]
+                # incelenen hücreyi çektim
+                if j < 2 and curr_cell.wall_info[0] == 1:
+                    # en üstteki haric duvarların kuzeyi kapalı mı?
+                    return False
+                if i < 2 and curr_cell.wall_info[1] == 1:
+                    # en batıdaki haric duvaların batısı kapalı mı?
+                    return False
+                if j > 2 and curr_cell.wall_info[2] == 1:
+                    return False
+                if i > 2 and curr_cell.wall_info[3] == 1:
+                    return False
+            return True
+
     def random_broker(self, x: int, y: int):
+
         wallnbr: int = random.randint(0, 14)
         broken_cell = Cell(x, y, wallnbr)
         self.grid[x][y] = broken_cell
@@ -102,13 +125,14 @@ class Maze():
                 broken_cell.wall_info[0] = 1
                 broken_cell.wall += 1
 
-        if "SOUTH" in broken_cell.nowall and y < self.height - 1:
+        if "SOUTH" in broken_cell.nowall and y > self.height - 1:
             temp_cell = self.grid[x][y-1]
             if temp_cell not in self.ft_cell:
                 if "NORTH" not in temp_cell.nowall:
                     temp_cell.nowall.add("NORTH")
                     temp_cell.wall -= 1
                     temp_cell.wall_info[0] = 0
+                    self.grid[x][y-1] = temp_cell  # bu yoktu ekledim
             else:
                 broken_cell.nowall.discard("SOUTH")
                 broken_cell.wall_info[2] = 1
@@ -120,6 +144,7 @@ class Maze():
                     temp_cell.nowall.add("WEST")
                     temp_cell.wall -= 8
                     temp_cell.wall_info[3] = 0
+                    self.grid[x+1][y] = temp_cell  # bu yoktu ekledim
             else:
                 broken_cell.nowall.discard("EAST")
                 broken_cell.wall_info[3] = 1
@@ -131,10 +156,51 @@ class Maze():
                     temp_cell.nowall.add("EAST")
                     temp_cell.wall -= 2
                     temp_cell.wall_info[1] = 0
+                    self.grid[x+1][y] = temp_cell  # bu yoktu ekledim
                 else:
                     broken_cell.nowall.discard("WEST")
                     broken_cell.wall_info[1] = 1
                     broken_cell.wall += 2
+
+    def broker_controller(self, x: int, y: int):  # koordinatları aldim
+        old_cell_wall = self.grid[x][y].wall  # değisiklik öncesi yedekleme
+        old_cell_nowall = set(self.grid[x][y].mowall)  # açık yönleri
+        old_cell_wall_info = list(self.grid[x][y].wall_info)  # duvar bilgisi
+
+        neighbors_backup = {}  # hücrenini komsularını buluyor
+        # burada sozluk olarak kaydettim ama emin degilim hata olabilir
+        for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+            nx, ny = s +dx, y + dy
+            if 0 <= nx < self.width and 0 <= ny < self.height:
+                c = self.grid[nx][ny]
+                # komsuların da duvarlarını degistirdigim için kaydediyorum
+                neighbors_backup[(nx, ny)] = (c.wall, set(c.nowall), list(c.wall_info))
+
+        self.random_broker(x, y)
+        # yedekleme yaptım, artık fonskiyonu cagırabilirim
+
+        rule = False  # baslangıcta 3x3 yokmus gibi
+
+        # burası biraz karısık, kırdıgım bu duvar, 3x3 luk boslugun 9 farklı
+        # yerinde olabilir. x +1 olması range ile alakalı/ x-2 x-1 ve x kont et
+        for start_x in range(x -2, x + 1):
+            for start_y in range(y - 2, y + 1):
+                if self.chechker_3x3(start_x, start_y):
+                    rule = True  # 9 hücre için çagırdım, ihlal varsa
+                    break
+                if rule:  # ihlal varsa burdan da çık
+                    break
+
+        if rule:  # ihlal varsa eski haline cevirir
+            self.grdi[x][y].wall = old_cell_wall
+            self.grid[x][y].nowall = old_cell_nowall
+            self.grid[x][y].wall_info = old_cell_wall_info
+
+            for (nx, ny), (w, nw, wi) in neighbors_backup.items():
+                #  komsu hücreleri de eski haline cevirir.
+                self.grid[nx][ny].wall = w
+                self.grid[nx][ny].nowall = nw
+                self.grid[nx][ny].wall_info = wi
 
     def choose_next_cell(self, curr_x: int, curr_y: int) -> tuple[int, int]:
         direction = random.choice(list(self.grid[curr_x][curr_y].nowall))
@@ -186,7 +252,7 @@ class Maze():
             dir_index1 = 3
             opp_direction = "EAST"
             dir_index2 = 1
-        # directiondaki yön cell1'de kapatacağımız, 
+        # directiondaki yön cell1'de kapatacağımız,
         # opp_directiondaki ce cell2'de kapatacağımz yön
         # hücreler komşu değilse None olarak kalırlar bi işlem yapmayız zaten
         if direction and opp_direction:  # None değilse
@@ -279,24 +345,12 @@ class Maze():
                 if curr_cell in main_path_set and next_cell not in main_path_set:
                     # su anki hücre ana yolda varsa ama sonraki yolda degilse dur
                     curr_x, curr_y = curr_cell  # hücrelerin koordinatları aldık
-                    next_x, next_y = next_cell  # hücrelerimizin yapısında kordinatlarını tutan bi tuple 
-                                                # değişkeni var onu kullanırsak daha kolar olur bu arada işimiz
-                                                # biz find_shortest_way içinde sadece kord listeleri listesi
-                                                #tuttuğumuz için olmadı bu bu arada.
-                    # for d, (dx, dy) in moves():  # hangi yönde farklılk olduğunu ara
-                    #     if curr_x + dx == next_x and curr_y + dy == next_y:
-                    #         target_direction = d
-                    #         break
-                    # if target_direction:  # bulduysam o hücreyi çekiyoruz
-                    #     current_cell = self.grid[curr_x][curr_y]
-                    # bu aşamada duvar örme fonksiyonunu yazıp kullanmak
-                    # mantıklı olur gibi geldi her seferinde duvar örme
-                    # algoritması yazmaktansa sanki -ENP
+                    next_x, next_y = next_cell  # hücrelerimizin yapısında kordinatlarını tutan bi tuple
                     self.build_wall_between(curr_cell, next_cell)
                     return True
                     # harita değişti en baştan çağırıcaz güncel halinde o yüzden return
         return False
-    
+
 
     def draw_maze(self):
             """
@@ -320,15 +374,6 @@ class Maze():
                     mid_line += "|   " if cell.wall_info[3] == 1 else "    "
                 # En sağ sınır duvarı
                 print(mid_line + "|")
-            
+
             # En alt taban çizgisi
             print("+---" * self.width + "+")
-
-# burdan sonra current_cell ve next_xell duvarlarının örülmesi gerek
-
-
-# DFS ile olası tüm çözüm yollarını bul
-# Yolları uzunluklarına göre sırala (uzunluklarına göre değil de, kaydedilen yol harici yollar)
-# Diğer yolları perfect yoldan kopar
-# 2. yolla birlikte koparmaya başla, 2. yoldan giderken perfect yolun dışına çıktığı ilk hücreyi bul
-# Ayrıştığı yeri bulunca duvar ör. Simetrik diger hücrenin de duvarını ör.
