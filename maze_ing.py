@@ -37,46 +37,72 @@ class Maze():
         self.seed = seed
         self.entry = entry
         self.exit = exit
-        
+        self.outer_walls: set[tuple[tuple[int, int], str]] = set()  # !hangi koordinatta hangi yönde duvar zorunlu diye bakıcaz
         for x in range(self.width):
             current_column: list[Cell] = []
             for y in range(self.height):
                 mazecell = Cell(x, y)
                 current_column.append(mazecell)
             self.grid.append(current_column)
-
+        self.out_wall()
+        self.ft_write()  # bu ikisini direkt burda da en başta kararlaştırabilirmişiz
     def ft_write(self) -> None:
-        if self.width >= 9 and self.height >= 7:
-            a: int = (self.width - 7) / 2
-            b: int = (self.height - 5) / 2
-            filled = Cell(a, b, 15)
-            coord: list[tuple[int, int]] = [(0, 0), (0, -1), (0, -2), (1, -2),
-                                            (2, -2), (2, -3), (2, -4), (6, -4),
-                                            (5, -4), (4, -4), (4, -3), (4, -2),
-                                            (5, -2), (6, -2), (6, -1), (6, 0),
-                                            (5, 0), (4, 0)]
+        if self.width >= 8 and self.height >= 6:
+            a: int = (self.width - 7) // 2  # // yapınca int'e kesiyo
+            b: int = (self.height - 5) // 2
+            coord: list[tuple[int, int]] = [(2, 0), (2, 1), (2, 2), (1, 2),
+                                            (0, 2), (0, 3), (0, 4), (4, 4),
+                                            (5, 4), (6, 4), (6, 3), (6, 2),
+                                            (5, 2), (4, 2), (4, 1), (4, 0),
+                                            (4, 0), (5, 0), (6, 0)]
             for (x, y) in coord:
-                filled = Cell(a+x, b+y, 15)
-                self.ft_cell.append(filled)
+                target_x = a + x
+                target_y = b + y
+                if 0 <= target_x < self.width and 0 <= target_y < self.height:
+                    self.ft_cell.append(self.grid[a + x][b + y])  # b+y dediğimizde -'li koordinatlar geliyor o yüzden - dememiz lazım ama emin değilim
+
+    def out_wall(self):
+        for x in range(self.width):
+            # En alt satırın SOUTH duvarı
+            self.outer_walls.add(((x, 0), "SOUTH"))
+            # En üst satırın NORTH duvarı
+            self.outer_walls.add(((x, self.height - 1), "NORTH"))
+        for y in range(self.height):
+            # En sol sütunun WEST duvarı
+            self.outer_walls.add(((0, y), "WEST"))
+            # En sağ sütunun EAST duvarı
+            self.outer_walls.add(((self.width - 1, y), "EAST"))
 
     def destroy_wall(self, cell1_coord: tuple[int, int],
                              cell2_coord: tuple[int, int]) -> None:
-            """İki hücre arasındaki duvarı ÇİFT TARAFLI olarak kalıcıca yıkar (0 yapar)."""
+            """İki hücre arasındaki duvarı ÇİFT TARAFLI olarak yıkar (0 yapar)."""
             x1, y1 = cell1_coord
             x2, y2 = cell2_coord
             c1 = self.grid[x1][y1]
             c2 = self.grid[x2][y2]
-            
+            #####DIŞ DUVARI YIKMIYORUZ HİÇ, içerdeki iki if onun için!!
             if x1 == x2 and y2 == y1 + 1:     # c2, c1'in Kuzeyinde
+                if (cell1_coord, "NORTH") in self.outer_walls:
+                    if (cell2_coord, "SOUTH") in self.outer_walls: 
+                        return
                 c1.walls["NORTH"] = 0
                 c2.walls["SOUTH"] = 0
             elif x1 == x2 and y2 == y1 - 1:   # c2, c1'in Güneyinde
+                if (cell1_coord, "SOUTH") in self.outer_walls:
+                    if (cell2_coord, "NORTH") in self.outer_walls:
+                        return
                 c1.walls["SOUTH"] = 0
                 c2.walls["NORTH"] = 0
             elif y1 == y2 and x2 == x1 + 1:   # c2, c1'in Doğusunda
+                if (cell1_coord, "EAST") in self.outer_walls:
+                    if (cell2_coord, "WEST") in self.outer_walls:
+                        return
                 c1.walls["EAST"] = 0
                 c2.walls["WEST"] = 0
             elif y1 == y2 and x2 == x1 - 1:   # c2, c1'in Batısında
+                if (cell1_coord, "WEST") in self.outer_walls:
+                    if (cell2_coord, "EAST") in self.outer_walls:
+                        return
                 c1.walls["WEST"] = 0
                 c2.walls["EAST"] = 0
 
@@ -89,7 +115,8 @@ class Maze():
         # iki hücrenin birbirine göre hangi hücrede olduğunu kaydedeceğim.
 
         if x1 == x2 and y2 == y1 + 1: 
-            if c2.walls["NORTH"] != 1 and c1.walls["SOUTH"] != 1:     # c2, c1'in Kuzeyinde
+            if c1.walls["NORTH"] != 1 and c2.walls["SOUTH"] != 1:
+                 # c2, c1'in Kuzeyinde
                 c1.walls["NORTH"] = 1
                 c2.walls["SOUTH"] = 1
                 return True
@@ -136,16 +163,18 @@ class Maze():
                     
                     # Sınırlar içinde mi ve daha önce bu garanti yol üstünde basıldı mı?
                     if 0 <= next_x < self.width and 0 <= next_y < self.height:
-                        if next_coord not in visited:
-                            
-                            # Geçici olarak duvarı yık
-                            self.destroy_wall(current, next_coord)
-                            # Her şey temizse patikayı ilerlet
-                            visited.add(next_coord)
-                            path.append(next_coord)
-                            current = next_coord
-                            moved = True
-                            break
+                        next_cell = self.grid[next_x][next_y]
+                        if next_cell not in self.ft_cell:
+                            if next_coord not in visited:
+                                
+                                # Geçici olarak duvarı yık
+                                self.destroy_wall(current, next_coord)
+                                # Her şey temizse patikayı ilerlet
+                                visited.add(next_coord)
+                                path.append(next_coord)
+                                current = next_coord
+                                moved = True
+                                break
                 # Eğer çıkmaz sokağa girip sıkışırsa diye moved 
                 # kullandık, ör 4x4 lük haritada (3,4)->(4,4) yaptık 
                 # (4,3)'e de önceden uğramışsak kitleniyo maze ondan
@@ -178,20 +207,25 @@ class Maze():
                 current_cell = self.grid[x][y]
                 if current_cell not in self.ft_cell:
                     cell_break_count = random.randint(1, 4)  # o hicrede kaç duvar yıkacağımı seçiyorum
+
                     chosen_directions = random.sample(directions,
                                                       cell_break_count)  #yıkacağım duvar sayısı kadar random yön listesinden seçtim
+                    
                     for direction in chosen_directions:
+                        if current_cell.walls[direction] == 0:
+                            continue
                         dx, dy = moves[direction]
                         next_x, next_y = x + dx, y + dy
                         if 0 <= next_x < self.width and 0 <= next_y < self.height:
-                            if current_cell.walls[direction] == 1:
-                                self.destroy_wall((x, y),
-                                                          (next_x, next_y))
-    
+                            next_cell = self.grid[next_x][next_y]
+                            if next_cell not in self.ft_cell:
+                                self.destroy_wall((x, y), (next_x, next_y))
+
+# optimizasyon için sadece 2 line değiştirmekten bahsetti ai 228, 237. 
     def find_solution_ways(self) -> list[list[tuple[int, int]]]:
         start = self.entry 
         end = self.exit
-        line = [[start]]
+        line = [[start]]  # optimizasyon için: line = deque([[start]])
         # yolları biriktirdiğimiz liste, start ile baslıyor
         start_to_finish: list[list[tuple[int, int]]] = []
 
@@ -200,7 +234,8 @@ class Maze():
         }
         opposite_dir = {"NORTH": "SOUTH", "EAST": "WEST", "SOUTH": "NORTH", "WEST": "EAST"}
         while line:  # yol bitene kadar çalış
-            path = line.pop(0)  # 0. indeksteki elemanı get. artık listede yok
+            path = line.pop(0)  # 0. indeksteki elemanı get. artık listede yok 
+            # optimizasyon için: path = line.popleft()
             current = path[-1]  # son eleman demek oluyor.
             if current == end:  # çıkısa geldim mi kontrolü
                 start_to_finish.append(path)
@@ -236,34 +271,43 @@ class Maze():
                                     # yeni yolu yol listesinde kaydettim.
         return start_to_finish
 
+# find_solution_ways için daha optimize çalışabilmesi için deque diye bir yapı
+# önerdi ai fatihle deniz de böyle bir şeyden bahsediyordu ne olduğuna bakıcam
+# şimdi tester ile denerken çok yavaş maze basıyor hatta büyük mazeleri hiç 
+# basmıyor sebep bu olabilir bi araştıralım
+
     def perfect_maker(self) -> bool:
         # başka yol varsa kapatiyorum
-        start = self.entry 
-        end = self.exit
-        all_paths = self.find_solution_ways(start, end)  # tüm yolları depolayalım
+        wall_built = False
+        while True:
+            all_paths = self.find_solution_ways()  # tüm yolları depolayalım
+            
+            if len(all_paths) <= 1:
+                break  # Eğer 1 veya daha az yol kaldıysa labirent artık perfect'tir, döngüden çık!
 
-        if len(all_paths) <= 1:  # birden fazla yol varsa fonk içine gir
-            return False
-
-        all_paths.sort(key=len)  # en kısa olandan uzun olana sıraladı
-        main_path = all_paths[0]  # en kısa olana ana yol dedim
-        main_path_set = set(main_path)  # kümeye çevirdim
-
-        moves = {
-            "NORTH": (0, 1), "SOUTH": (0, -1), "EAST": (1, 0), "WEST": (-1, 0)
-        }
-
-        for path in all_paths[1:]:  # 1. indeksteki yoldan başlıyruz
-
-            for i in range(len(path) - 1):  # alt. yol ilk yoldan ne zaman kopar
-                # sonrakini de kontrol ettiğim için -1 tasmasın diye
-                curr_cell = path[i]
-                next_cell = path[i+1]
-
-                if curr_cell in main_path_set and next_cell not in main_path_set:
-                    if self.build_wall(curr_cell, next_cell) == True:
-                        return True
-        return False
+            all_paths.sort(key=len)  # en kısa olandan uzun olana sıraladı
+            main_path = all_paths[0]  # en kısa olana ana yol dedim
+            main_path_set = set(main_path)  # kümeye çevirdim
+            this_turn_built = False  # geçerli yolda duvar örülüp örülmediğine bakıyor, örüldüyse diğer yola gitmek için
+            for path in all_paths[1:]:  # 1. indeksteki yoldan başlıyruz
+                for i in range(len(path) - 1):  # alt. yol ilk yoldan ne zaman kopar
+                    # sonrakini de kontrol ettiğim için -1 tasmasın diye
+                    curr_cell = path[i]
+                    next_cell = path[i+1]
+                    if curr_cell in main_path_set and next_cell not in main_path_set:
+                        if self.build_wall(curr_cell, next_cell) == True:
+                            this_turn_built = True
+                            wall_built = True  
+                            # döngünün en başına dönüldüğünde this_turn_buillt
+                            #  sıfırlanacak ama biz en az bile bir duvar 
+                            # ördüysek return True edebilmek iiçin bunu 
+                            # kullanıyoruz
+                            break # İçteki for'u kır, bir sonraki alternatife git (veya while başına dön)
+                if this_turn_built:
+                    break # Bu alternatif yollardan birine duvar ördük, harita değişti! 
+                      # O yüzden alt yolları gezmeyi bırakıp, en dıştaki while başına dönüp 
+                      # find_solution_ways()'i taze verilerle yeniden çalıştırmak için burayı da kırıyoruz.
+        return wall_built
 
     def fix_isolated_cells(self) -> bool:
         """
@@ -286,135 +330,52 @@ class Maze():
                     for direction in directions:
                         dx, dy = moves[direction]
                         next_x, next_y = x + dx, y + dy
-                        next_coord = x + dx, y + dy
-                        if 0 <= next_x < self.width and 0 <= next_y < self.height:
-                            if next_coord not in self.ft_cell:
-                                self.destroy_wall((x, y), (next_x, next_y))
-                                any_cell_fixed = True
-                                break # Tek bir duvar yıkıp kurtarmamız yeterli, sonraki hücreye geç
+                        if 0 <= next_x < self.width:
+                            if 0 <= next_y < self.height:
+                                next_cell = self.grid[next_x][next_y]
+                        else:
+                            continue
+                        if 0 <= next_x < self.width:
+                            if 0 <= next_y < self.height:
+                                if next_cell not in self.ft_cell:
+                                    self.destroy_wall((x, y),
+                                                      (next_x, next_y))
+                                    any_cell_fixed = True
+                                    break # Tek bir duvar yıkıp kurtarmamız yeterli, sonraki hücreye geç
         return any_cell_fixed
 
-    def chechker_3x3(self, start_x: int, start_y: int) -> bool:
+    def chechker_3x3(self) -> bool:
+        start_x = self.entry[0]
+        start_y = self.entry[1]
         # bu if blokunu nasıl kısaltacagımı bilmiyorum :()
-            if start_x < 0 or start_y < 0:
-                return False  # burada dış sınırlara taşıyor mu diye baktım
-            if start_x + 2 >= self.width or start_y + 2 >= self.height:
-                return False
-            for i in range (3):  # tüm 3x3 luk alanı gezmek için dongu
-                for j in range (3):
-                    curr_cell = self.grid[start_x + i],[ start_y + j]
-                    # incelenen hücreyi çektim
-                    if j < 2 and curr_cell.wall_info[0] == 1:
-                        # en üstteki haric duvarların kuzeyi kapalı mı?
-                        return False
-                    if i < 2 and curr_cell.wall_info[1] == 1:
-                        # en batıdaki haric duvaların batısı kapalı mı?
-                        return False
-                    if j > 2 and curr_cell.wall_info[2] == 1:
-                        return False
-                    if i > 2 and curr_cell.wall_info[3] == 1:
-                        return False
-                return True
+        if start_x < 0 or start_y < 0:
+            return False  # burada dış sınırlara taşıyor mu diye baktım
+        if start_x + 2 >= self.width or start_y + 2 >= self.height:
+            return False
+        for i in range (3):  # tüm 3x3 luk alanı gezmek için dongu
+            for j in range (3):
+                curr_cell = self.grid[start_x + i][ start_y + j]
+                # incelenen hücreyi çektim
+                if j < 2 and curr_cell.walls["NORTH"] == 1:
+                    # en üstteki haric duvarların kuzeyi kapalı mı?
+                    return False
+                if i < 2 and curr_cell.walls["EAST"] == 1: 
+                    # en batıdaki haric duvaların batısı kapalı mı? wall_info[1]
+                    return False
+                if j > 2 and curr_cell.walls["SOUTH"] == 1:  # wall_info[2]
+                    return False
+                if i > 2 and curr_cell.walls["WEST"] == 1:  # wall_info[3]
+                    return False
+        return True
 
-
-
-
-
-# =====================================================================
-# 🛠️ YENİLENMİŞ LABİRENT TEST VE MATRİS MOTORU
-# =====================================================================
-
-def run_perfect_maze_test(width: int, height: int):
-    # 1. Labirenti Kur
-    maze = Maze(width, height)
-    start_point = (0, 0)
-    end_point = (width - 1, height - 1)
-    
-    print(f"🎲 {width}x{height} boyutlarında yeni bir labirent inşa ediliyor...")
-    
-    # 2. İlk Adım: Garanti Patikayı Çiz
-    guaranteed_coords = maze.create_guaranteed_path(start_point, end_point)
-    print(f" Patika Oluşturuldu: START -> END arası ilk garanti koridor açıldı.")
-    
-    # 3. İkinci Adım: Çevre Hücreleri Rastgele Kır (Kaos)
-    # Koridor yapısı için random_broker'ı hücre başına 1-2 duvar kıracak şekilde optimize ettik
-    maze.random_broker() 
-    print("💥 Kaos Yaratıldı: İç hücreler rastgele esnetildi.")
-    
-    # Budama ve kurtarma öncesi durumu ölçelim
-    initial_paths = maze.find_solution_ways(start_point, end_point)
-    print(f"🔄 Optimizasyon öncesi alternatif yol sayısı: {len(initial_paths)}")
-    
-    # 4. Üçüncü Adım: PING-PONG Döngüsü (Kusursuzlaştır & Kurtar)
-    print("\n✂️ Optimizasyon ve Kurtarma döngüsü başlatılıyor...")
-    iteration = 0
-    
-    while True:
-        iteration += 1
-        # A) Kaçak kısayolları ve alternatif döngüleri temizle
-        perfect_loops = 0
-        while maze.perfect_maker(start_point, end_point):
-            perfect_loops += 1
-            
-        # B) Budamadan sonra 4 duvarı kapalı kalan hücreleri bul ve kurtar
-        cells_fixed = maze.fix_isolated_cells()
-        
-        print(f"  > Tur {iteration}: {perfect_loops} kaçak yol kapatıldı. İzole hücre kurtarıldı mı? -> {cells_fixed}")
-        
-        # C) Eğer hiçbir izole hücreye dokunulmadıysa mükemmel dengeye ulaştık demektir!
-        if not cells_fixed:
-            break
-
-    # 5. Kesin Kontrol ve Raporlama
-    final_paths = maze.find_solution_ways(start_point, end_point)
-    
-    print("\n" + "="*20 + " KESİN TEST SONUCU " + "="*20)
-    if len(final_paths) == 1:
-        print(f"✅ BAŞARILI: Labirent 'Kusursuz (Perfect)' standartlara ulaştı!")
-        print(f"🎯 Çözüm Yolu Sayısı: {len(final_paths)} (Tam istediğimiz gibi TEK çözümlü)")
-        print(f"🏁 Çözüm Patikası Uzunluğu: {len(final_paths[0])} Hücre")
-    elif len(final_paths) == 0:
-        print("❌ BAŞARISIZ: Kurtarma esnasında ana yol kazara tamamen kilitlendi!")
-    else:
-        print(f"❌ BAŞARISIZ: Haritada hâlâ birden fazla ({len(final_paths)}) çözüm yolu var!")
-    print("="*59 + "\n")
-    
-    # 6. Haritayı Konsola Çizdirme
-    solution_set = set(final_paths[0]) if final_paths else set()
-    print("--- LABİRENTİN GÖRSEL HARİTASI ---")
-    print(" (S: Başlangıç, E: Bitiş, * : Çözüm Yolu )")
-    
-    for y in reversed(range(maze.height)):
-        # Üst Duvarlar
-        top_line = ""
-        for x in range(maze.width):
-            cell = maze.grid[x][y]
-            top_line += "+---" if cell.walls["NORTH"] == 1 else "+   "
-        print(top_line + "+")
-        
-        # Yan Duvarlar ve Hücre İçleri
-        mid_line = ""
-        for x in range(maze.width):
-            cell = maze.grid[x][y]
-            left_wall = "| " if cell.walls["WEST"] == 1 else "  "
-            
-            if (x, y) == start_point:
-                char = "S "
-            elif (x, y) == end_point:
-                char = "E "
-            elif (x, y) in solution_set:
-                char = "* "
-            else:
-                char = "  "
-            mid_line += left_wall + char
-        print(mid_line + "|")
-    print("+---" * maze.width + "+")
-    
-    # 7. Senin İstediğin Hexadecimal Matris Çıktısı
-    print("\n--- LABİRENTİN NİHAİ HEXADECIMAL MATRİSİ ---")
-    for y in reversed(range(maze.height)):
-        row_hex = [maze.grid[x][y].get_hex_value() for x in range(maze.width)]
-        print(" ".join(row_hex))
-
-# Testi 10x10 boyutlarında çalıştırıp sonucu izleyelim
-run_perfect_maze_test(5,5)
+    def generate(self):
+        self.ft_write()
+        self.create_guaranteed_path()
+        self.random_broker()
+        while True:
+            while self.perfect_maker():
+                pass
+            cells_fixed = self.fix_isolated_cells()
+            if not cells_fixed:
+                break
+        return self.find_solution_ways()

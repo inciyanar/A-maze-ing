@@ -70,8 +70,8 @@ class Maze():
         self.solve: list[Cell] = []
 
     def ft_write(self):
-        a: int = (self.width - 7) / 2
-        b: int = (self.height - 5) / 2
+        a: int = int((self.width - 7) / 2)
+        b: int = int((self.height - 5) / 2)
         filled = Cell(a, b, 15)
         coord: list[tuple[int, int]] = [(0, 0), (0, -1), (0, -2), (1, -2),
                                         (2, -2), (2, -3), (2, -4), (6, -4),
@@ -81,28 +81,6 @@ class Maze():
         for (x, y) in coord:
             filled = Cell(a+x, b+y, 15)
             self.ft_cell.append(filled)
-
-  # 3x3 luk bos alan var mi dyie bakıyorum
-    def chechker_3x3(self, start_x: int, start_y: int) -> bool:
-    # bu if blokunu nasıl kısaltacagımı bilmiyorum :()
-        if start_x < 0 or start_y < 0 or start_x + 2 >= self.width or start_y + 2 >= self.height:
-            return False  # burada dış sınırlara taşıyor mu diye baktım
-
-        for i in range (3):  # tüm 3x3 luk alanı gezmek için dongu
-            for j in range (3):
-                curr_cell = self.grid[start_x + i],[ start_y + j]
-                # incelenen hücreyi çektim
-                if j < 2 and curr_cell.wall_info[0] == 1:
-                    # en üstteki haric duvarların kuzeyi kapalı mı?
-                    return False
-                if i < 2 and curr_cell.wall_info[1] == 1:
-                    # en batıdaki haric duvaların batısı kapalı mı?
-                    return False
-                if j > 2 and curr_cell.wall_info[2] == 1:
-                    return False
-                if i > 2 and curr_cell.wall_info[3] == 1:
-                    return False
-            return True
 
     def random_broker(self, x: int, y: int):
 
@@ -164,13 +142,13 @@ class Maze():
 
     def broker_controller(self, x: int, y: int):  # koordinatları aldim
         old_cell_wall = self.grid[x][y].wall  # değisiklik öncesi yedekleme
-        old_cell_nowall = set(self.grid[x][y].mowall)  # açık yönleri
+        old_cell_nowall = set(self.grid[x][y].nowall)  # açık yönleri
         old_cell_wall_info = list(self.grid[x][y].wall_info)  # duvar bilgisi
 
         neighbors_backup = {}  # hücrenini komsularını buluyor
         # burada sozluk olarak kaydettim ama emin degilim hata olabilir
         for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-            nx, ny = s +dx, y + dy
+            nx, ny = x +dx, y + dy
             if 0 <= nx < self.width and 0 <= ny < self.height:
                 c = self.grid[nx][ny]
                 # komsuların da duvarlarını degistirdigim için kaydediyorum
@@ -192,7 +170,7 @@ class Maze():
                     break
 
         if rule:  # ihlal varsa eski haline cevirir
-            self.grdi[x][y].wall = old_cell_wall
+            self.grid[x][y].wall = old_cell_wall
             self.grid[x][y].nowall = old_cell_nowall
             self.grid[x][y].wall_info = old_cell_wall_info
 
@@ -205,19 +183,14 @@ class Maze():
     def choose_next_cell(self, curr_x: int, curr_y: int) -> tuple[int, int]:
         direction = random.choice(list(self.grid[curr_x][curr_y].nowall))
         if direction == "NORTH":
-            return [curr_x][curr_y + 1]
+            return (curr_x, curr_y + 1)
         if direction == "SOUTH":
-            return [curr_x][curr_y - 1]
+            return (curr_x,curr_y - 1)
         if direction == "EAST":
-            return [curr_x + 1][curr_y]
+            return (curr_x + 1,curr_y)
         if direction == "WEST":
-            return [curr_x - 1][curr_y]
-
-    def brokeforsolve(self):
-        parser = Deneme()
-        info = parser.parsing()
-        entry = info["ENTRY"]
-        entry_parse: list[int] = entry.split(',')
+            return (curr_x - 1,curr_y)
+        return(0, 0)
 
     def build_wall_between(self, cell1_coord: tuple[int, int], cell2_coord: tuple[int, int]):
         x1, y1 = cell1_coord
@@ -351,6 +324,28 @@ class Maze():
                     # harita değişti en baştan çağırıcaz güncel halinde o yüzden return
         return False
 
+
+    def chechker_3x3(self, start_x: int, start_y: int) -> bool:
+        # bu if blokunu nasıl kısaltacagımı bilmiyorum :()
+        if start_x < 0 or start_y < 0:
+            return False  # burada dış sınırlara taşıyor mu diye baktım
+        if start_x + 2 >= self.width or start_y + 2 >= self.height:
+            return False
+        for i in range (3):  # tüm 3x3 luk alanı gezmek için dongu
+            for j in range (3):
+                curr_cell = self.grid[start_x + i][ start_y + j]
+                # incelenen hücreyi çektim
+                if j < 2 and curr_cell.wall_info[0] == 1:
+                    # en üstteki haric duvarların kuzeyi kapalı mı?
+                    return False
+                if i < 2 and curr_cell.wall_info[1] == 1:
+                    # en batıdaki haric duvaların batısı kapalı mı?
+                    return False
+                if j > 2 and curr_cell.wall_info[2] == 1:
+                    return False
+                if i > 2 and curr_cell.wall_info[3] == 1:
+                    return False
+        return True
 
     def draw_maze(self):
             """

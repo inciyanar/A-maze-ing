@@ -73,9 +73,10 @@ class ConfigParser:
         
         # Perfect kontrolünden emin olamadım bool bir tip olması için ne 
         # yapmak lazım diye ama böyle diyince oluyo galiba
-        if self.data["PERFECT"] == "True":
+        self.data["PERFECT"] = self.data["PERFECT"].upper()
+        if self.data["PERFECT"] == "TRUE":
             validated_data["PERFECT"] = True
-        elif self.data["PERFECT"] == "False":
+        elif self.data["PERFECT"] == "FALSE":
             validated_data["PERFECT"] = False
         else:
             raise ValueError("Configuration Error: PERFECT must be bool!")
