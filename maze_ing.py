@@ -1,5 +1,7 @@
 import random
 import pars_ing
+import typing
+
 
 class Cell:
     def __init__(self, x: int, y: int):
@@ -24,11 +26,17 @@ class Cell:
 
 
 class Maze():
-    def __init__(self, width: int, height: int):
+    def __init__(self, width: int, height: int, entry: tuple[int, int],
+                  exit: tuple[int, int], perfect: bool,
+                  seed: typing.Optional[int] = None):
         self.width: int = width
         self.height: int = height
         self.grid: list[list[Cell]] = []
         self.ft_cell: list[Cell] = []
+        self.perfect = perfect
+        self.seed = seed
+        self.entry = entry
+        self.exit = exit
         
         for x in range(self.width):
             current_column: list[Cell] = []
@@ -51,7 +59,7 @@ class Maze():
                 filled = Cell(a+x, b+y, 15)
                 self.ft_cell.append(filled)
 
-    def destroy_wall_between(self, cell1_coord: tuple[int, int],
+    def destroy_wall(self, cell1_coord: tuple[int, int],
                              cell2_coord: tuple[int, int]) -> None:
             """İki hücre arasındaki duvarı ÇİFT TARAFLI olarak kalıcıca yıkar (0 yapar)."""
             x1, y1 = cell1_coord
@@ -72,7 +80,7 @@ class Maze():
                 c1.walls["WEST"] = 0
                 c2.walls["EAST"] = 0
 
-    def build_wall_between(self, cell1_coord: tuple[int, int],
+    def build_wall(self, cell1_coord: tuple[int, int],
                            cell2_coord: tuple[int, int]) -> bool:
         x1, y1 = cell1_coord
         x2, y2 = cell2_coord
@@ -103,11 +111,12 @@ class Maze():
         return False
         # burada da duvarları açmış olduk aslında
 
-    def create_guaranteed_path(self, start: tuple[int, int],
-                               end: tuple[int, int]) -> list[tuple[int, int]]:
+    def create_guaranteed_path(self) -> list[tuple[int, int]]:
             """
             START'tan END'e kadar rastgele yol oluşturan fonksiyon
             """
+            start = self.entry 
+            end = self.exit
             path = [start]
             visited = {start}
             current = start
@@ -130,7 +139,7 @@ class Maze():
                         if next_coord not in visited:
                             
                             # Geçici olarak duvarı yık
-                            self.destroy_wall_between(current, next_coord)
+                            self.destroy_wall(current, next_coord)
                             # Her şey temizse patikayı ilerlet
                             visited.add(next_coord)
                             path.append(next_coord)
@@ -155,7 +164,9 @@ class Maze():
     def random_broker(self, break_count: int = 2) -> None:
         """
         Haritadaki her iç hücre için belirlenen adet (break_count) kadar 
-        rastgele iç duvarı yıkar. Dış sınır duvarlarına (ft_cell) asla dokunmaz.
+        rastgele iç duvarı yıkar. Belki sonra gerekir diye buraya break_c
+        yazdım ama kullanmayadabiliriz hiç. 
+        Dış sınır duvarlarına (ft_cell) dokunmaz.
         """
         directions = ["NORTH", "EAST", "SOUTH", "WEST"]
         moves = {
@@ -174,11 +185,12 @@ class Maze():
                         next_x, next_y = x + dx, y + dy
                         if 0 <= next_x < self.width and 0 <= next_y < self.height:
                             if current_cell.walls[direction] == 1:
-                                self.destroy_wall_between((x, y),
+                                self.destroy_wall((x, y),
                                                           (next_x, next_y))
     
-    def find_solution_ways(self, start: tuple[int, int],
-                        end: tuple[int, int]) -> list[list[tuple[int, int]]]:
+    def find_solution_ways(self) -> list[list[tuple[int, int]]]:
+        start = self.entry 
+        end = self.exit
         line = [[start]]
         # yolları biriktirdiğimiz liste, start ile baslıyor
         start_to_finish: list[list[tuple[int, int]]] = []
@@ -224,9 +236,10 @@ class Maze():
                                     # yeni yolu yol listesinde kaydettim.
         return start_to_finish
 
-    def perfect_maker(self, start: tuple[int, int],
-                      end: tuple[int, int]) -> bool:
+    def perfect_maker(self) -> bool:
         # başka yol varsa kapatiyorum
+        start = self.entry 
+        end = self.exit
         all_paths = self.find_solution_ways(start, end)  # tüm yolları depolayalım
 
         if len(all_paths) <= 1:  # birden fazla yol varsa fonk içine gir
@@ -248,8 +261,7 @@ class Maze():
                 next_cell = path[i+1]
 
                 if curr_cell in main_path_set and next_cell not in main_path_set:
-
-                    if self.build_wall_between(curr_cell, next_cell) == True:
+                    if self.build_wall(curr_cell, next_cell) == True:
                         return True
         return False
 
@@ -267,7 +279,6 @@ class Maze():
         for x in range(self.width):
             for y in range(self.height):
                 current_cell = self.grid[x][y]
-                
                 # Eğer hücre ft_cell listesinde değilse ve 4 duvarı da tamamen kapalıysa (15)
                 if current_cell not in self.ft_cell and current_cell.wallnbr == 15:
                     # Hücreyi kurtarmak için yönleri karıştırıp bir komşu arıyoruz
@@ -278,20 +289,32 @@ class Maze():
                         next_coord = x + dx, y + dy
                         if 0 <= next_x < self.width and 0 <= next_y < self.height:
                             if next_coord not in self.ft_cell:
-                                self.destroy_wall_between((x, y), (next_x, next_y))
+                                self.destroy_wall((x, y), (next_x, next_y))
                                 any_cell_fixed = True
                                 break # Tek bir duvar yıkıp kurtarmamız yeterli, sonraki hücreye geç
         return any_cell_fixed
 
-    def check_3x3_blank(self, x: int, y: int) -> bool:
-        """ (x,y) deki bir hücrenin 3x3'lük bir yerde center olup olmadığına bakar"""
-        if x <= 0 or x >= self.width - 1 or y <= 0 or y >= self.height - 1:
-            return False
-        curr_cell = self.grid[x][y]
-        check_neigborhood: list[tuple[int, int]] = [(1, 0), (-1, 0), (-1, 1), (0,1), (1, 1), (-1, -1), (0, -1), (1, -1)]
-        for (dx, dy) in check_neigborhood:
-
-            return False
+    def chechker_3x3(self, start_x: int, start_y: int) -> bool:
+        # bu if blokunu nasıl kısaltacagımı bilmiyorum :()
+            if start_x < 0 or start_y < 0:
+                return False  # burada dış sınırlara taşıyor mu diye baktım
+            if start_x + 2 >= self.width or start_y + 2 >= self.height:
+                return False
+            for i in range (3):  # tüm 3x3 luk alanı gezmek için dongu
+                for j in range (3):
+                    curr_cell = self.grid[start_x + i],[ start_y + j]
+                    # incelenen hücreyi çektim
+                    if j < 2 and curr_cell.wall_info[0] == 1:
+                        # en üstteki haric duvarların kuzeyi kapalı mı?
+                        return False
+                    if i < 2 and curr_cell.wall_info[1] == 1:
+                        # en batıdaki haric duvaların batısı kapalı mı?
+                        return False
+                    if j > 2 and curr_cell.wall_info[2] == 1:
+                        return False
+                    if i > 2 and curr_cell.wall_info[3] == 1:
+                        return False
+                return True
 
 
 
