@@ -14,3 +14,8 @@ AI usage
 -generating tests
 -fixing bugs (such as gneerating maze is taking so long)
 -
+
+notes:
+benim yazdığım isoleted_cell'i denedim bende doğru çalıştı aslında...
+Terminal Arayüzünü Başlatmak için fonksiyon yazılacak
+hata mesajları konusunda kafam karışık...

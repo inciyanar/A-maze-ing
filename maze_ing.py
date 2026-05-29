@@ -1,5 +1,4 @@
 import random
-import pars_ing
 import typing
 
 
@@ -44,6 +43,11 @@ class Maze():
                 mazecell = Cell(x, y)
                 current_column.append(mazecell)
             self.grid.append(current_column)
+        if self.seed is not None:
+            random.seed(self.seed)  # randoma bağlı kullandığımız fonksiyonların
+            # random.shuffle(), random.randint() fln, her çalıştırmada aynı seçimi
+            # yapmasını sağlayan bi işlevi varmış en çok nasıl hallederiz dediğim
+            # şeyin bu kadar kolay hallolmasına şokum...
         self.out_wall()
         self.ft_write()  # bu ikisini direkt burda da en başta kararlaştırabilirmişiz
     def ft_write(self) -> None:
@@ -206,7 +210,8 @@ class Maze():
             for y in range(1, self.height - 1):
                 current_cell = self.grid[x][y]
                 if current_cell not in self.ft_cell:
-                    cell_break_count = random.randint(1, 4)  # o hicrede kaç duvar yıkacağımı seçiyorum
+                    cell_break_count = random.randint(0, 2)  # o hicrede kaç duvar yıkacağımı seçiyorum, 
+                                                             # 4 diyince çok da yıkabiliyo 2'ye düşürdüm
 
                     chosen_directions = random.sample(directions,
                                                       cell_break_count)  #yıkacağım duvar sayısı kadar random yön listesinden seçtim
@@ -220,6 +225,25 @@ class Maze():
                             next_cell = self.grid[next_x][next_y]
                             if next_cell not in self.ft_cell:
                                 self.destroy_wall((x, y), (next_x, next_y))
+                                # elimizde checker var ama kullanmamışız ki hiç.... ya buraya 
+                                # ya da destroy walla ekleyip kontrol etmek lazım ilk burası gelmişti aklıma
+                                # şimdi düşününce destroy wall daha mantıklı geldi...... yarın tekrar düşünücem
+                                start_x_min = max(0, x - 2)
+                                start_x_max = min(self.width - 3, x)
+                                start_y_min = max(0, y - 2)
+                                start_y_max = min(self.height - 3, y)
+                                illegal_area_found = False
+                                for sx in range(start_x_min, start_x_max + 1):
+                                    for sy in range(start_y_min, start_y_max + 1):
+                                        # kontrol ediyoruz!
+                                        if self.chechker_3x3():
+                                            illegal_area_found = True
+                                            break
+                                    if illegal_area_found:
+                                        break
+                                # eğer checker3x3 bir boşluk yakaladıysa duvarı geri örüyoruz
+                                if illegal_area_found:
+                                    self.build_wall((x, y), (next_x, next_y))
 
     def get_open_neighbors(self, cell_coord: tuple[int, int]) -> list[tuple[int, int]]:
             x, y = cell_coord
@@ -376,104 +400,103 @@ class Maze():
                       # find_solution_ways()'i taze verilerle yeniden çalıştırmak için burayı da kırıyoruz.
         return wall_built
 
-    # def fix_isolated_cells(self) -> bool:
-    #     """
-    #     Perfect_maker çalıştıktan sonra haritayı son bir kez tarar.
-    #     4 duvarı da kapalı kalmış hücreleri bulur ve onları rastgele
-    #     bir iç komşusuna bağlar.
-    #     """
-    #     directions = ["NORTH", "EAST", "SOUTH", "WEST"]
-    #     moves = {
-    #         "NORTH": (0, 1), "SOUTH": (0, -1), "EAST": (1, 0), "WEST": (-1, 0)
-    #     }
-    #     any_cell_fixed = False  # Eğer bi hücre düzeltildiyse perfect_cell tekrar çalışsın diye
-    #     for x in range(self.width):
-    #         for y in range(self.height):
-    #             current_cell = self.grid[x][y]
-    #             # Eğer hücre ft_cell listesinde değilse ve 4 duvarı da tamamen kapalıysa (15)
-    #             if current_cell not in self.ft_cell and current_cell.wallnbr == 15:
-    #                 # Hücreyi kurtarmak için yönleri karıştırıp bir komşu arıyoruz
-    #                 random.shuffle(directions)
-    #                 for direction in directions:
-    #                     dx, dy = moves[direction]
-    #                     next_x, next_y = x + dx, y + dy
-    #                     if 0 <= next_x < self.width:
-    #                         if 0 <= next_y < self.height:
-    #                             next_cell = self.grid[next_x][next_y]
-    #                     else:
-    #                         continue
-    #                     if 0 <= next_x < self.width:
-    #                         if 0 <= next_y < self.height:
-    #                             if next_cell not in self.ft_cell:
-    #                                 self.destroy_wall((x, y),
-    #                                                   (next_x, next_y))
-    #                                 any_cell_fixed = True
-    #                                 break # Tek bir duvar yıkıp kurtarmamız yeterli, sonraki hücreye geç
-    #     return any_cell_fixed
-
-    from collections import deque  # çektim ama tanımadı, neden anlamadım
-
     def fix_isolated_cells(self) -> bool:
-
-        # bu fonksiyonda girişten başlayarak ulaşabildigimiz tüm hücrelere ulaşıyoruz,
-        # ulaşamadıklarımız isolated demektir.
-        start_coord = self.entry
-        visited = set()  # ziyaret edilen yerlerin kümesi, bu olmadıgı için patladık
-
-        tail = self.deque([start_coord])  # deque olan bir kuyruk ekliyorum.
-        # bu kuyruk kontrol edilecek olan hücreleri tutuyor, tek tek buradan alıp
-        # döngüye sokuyoruz
-        visited.add(start_coord)
-
-        moves = {"NORTH": (0, 1), "SOUTH": (0, -1), "EAST": (1, 0), "WEST": (-1, 0)}
-
-        # kuyrukta hücre kalmayana kadar devam et
-        while tail:
-            curr_x, curr_y = tail.popleft()  # normalde pop kullanmıştık, deque oldugu
-            # için artık popleft, kuyrugun en önü oluyor.buradan hücre çekiyorum
-            curr_cell = self.grid[curr_x][curr_y]
-
-            for direction, (dx, dy) in moves.items():
-                if curr_cell.walls.get(direction, 1) == 0:  # yol açık ise
-                    nx, ny = curr_x + dx, curr_y + dy
-
-                    if 0 <= nx < self.width and 0 <= ny < self.height:  # labirent sınırlarındaysa
-                        if (nx, ny) not in visited:
-                            visited.add((nx, ny))  # ziyaret kümesine ekler
-                            tail.append((nx, ny))  # dequenin sonuna ekler
-
-        # artık girişten itibaren ulaşılabilen tüm hücreler visited içinde
-        any_cell_fixed = False
-
-        for x in range(self.width):  # tüm haritayı tarıyorum
+        """
+        Perfect_maker çalıştıktan sonra haritayı son bir kez tarar.
+        4 duvarı da kapalı kalmış hücreleri bulur ve onları rastgele
+        bir iç komşusuna bağlar.
+        """
+        directions = ["NORTH", "EAST", "SOUTH", "WEST"]
+        moves = {
+            "NORTH": (0, 1), "SOUTH": (0, -1), "EAST": (1, 0), "WEST": (-1, 0)
+        }
+        any_cell_fixed = False  # Eğer bi hücre düzeltildiyse perfect_cell tekrar çalışsın diye
+        for x in range(self.width):
             for y in range(self.height):
-                current_coord = (x, y)
-
-                if current_coord not in visited and self.grid[x][y] not in self.ft_cell:
-                    # eğer hücre izole ise, 4 komsusuna bakıyorum random, hangisi visited içinde
-                    # onu bulmam lazim
-                    directions = list(moves.keys())
+                current_cell = self.grid[x][y]
+                # Eğer hücre ft_cell listesinde değilse ve 4 duvarı da tamamen kapalıysa (15)
+                if current_cell not in self.ft_cell and current_cell.wallnbr == 15:
+                    # Hücreyi kurtarmak için yönleri karıştırıp bir komşu arıyoruz
                     random.shuffle(directions)
-
                     for direction in directions:
                         dx, dy = moves[direction]
                         next_x, next_y = x + dx, y + dy
-                        next_coord = (next_x, next_y)
-
-                        # hangi komsu oldugunu bulduktan sonra oradaki duvarı yıkıyorum.
-                        if 0 <= next_x < self.width and 0 <= next_y < self.height:
-                            if next_coord in visited and self.grid[next_x][next_y] not in self.ft_cell:
-                                self.destroy_wall(current_coord, next_coord)
-                                visited.add(current_coord)
-                                any_cell_fixed = True
-                                break
-
+                        if 0 <= next_x < self.width:
+                            if 0 <= next_y < self.height:
+                                next_cell = self.grid[next_x][next_y]
+                        else:
+                            continue
+                        if 0 <= next_x < self.width:
+                            if 0 <= next_y < self.height:
+                                if next_cell not in self.ft_cell:
+                                    self.destroy_wall((x, y),
+                                                      (next_x, next_y))
+                                    any_cell_fixed = True
+                                    break # Tek bir duvar yıkıp kurtarmamız yeterli, sonraki hücreye geç
         return any_cell_fixed
 
+    from collections import deque  # çektim ama tanımadı, neden anlamadım
+
+    """     def fix_isolated_cells(self) -> bool:
+
+            # bu fonksiyonda girişten başlayarak ulaşabildigimiz tüm hücrelere ulaşıyoruz,
+            # ulaşamadıklarımız isolated demektir.
+            start_coord = self.entry
+            visited = set()  # ziyaret edilen yerlerin kümesi, bu olmadıgı için patladık
+
+            tail = self.deque([start_coord])  # deque olan bir kuyruk ekliyorum.
+            # bu kuyruk kontrol edilecek olan hücreleri tutuyor, tek tek buradan alıp
+            # döngüye sokuyoruz
+            visited.add(start_coord)
+
+            moves = {"NORTH": (0, 1), "SOUTH": (0, -1), "EAST": (1, 0), "WEST": (-1, 0)}
+
+            # kuyrukta hücre kalmayana kadar devam et
+            while tail:
+                curr_x, curr_y = tail.popleft()  # normalde pop kullanmıştık, deque oldugu
+                # için artık popleft, kuyrugun en önü oluyor.buradan hücre çekiyorum
+                curr_cell = self.grid[curr_x][curr_y]
+
+                for direction, (dx, dy) in moves.items():
+                    if curr_cell.walls.get(direction, 1) == 0:  # yol açık ise
+                        nx, ny = curr_x + dx, curr_y + dy
+
+                        if 0 <= nx < self.width and 0 <= ny < self.height:  # labirent sınırlarındaysa
+                            if (nx, ny) not in visited:
+                                visited.add((nx, ny))  # ziyaret kümesine ekler
+                                tail.append((nx, ny))  # dequenin sonuna ekler
+
+            # artık girişten itibaren ulaşılabilen tüm hücreler visited içinde
+            any_cell_fixed = False
+
+            for x in range(self.width):  # tüm haritayı tarıyorum
+                for y in range(self.height):
+                    current_coord = (x, y)
+
+                    if current_coord not in visited and self.grid[x][y] not in self.ft_cell:
+                        # eğer hücre izole ise, 4 komsusuna bakıyorum random, hangisi visited içinde
+                        # onu bulmam lazim
+                        directions = list(moves.keys())
+                        random.shuffle(directions)
+
+                        for direction in directions:
+                            dx, dy = moves[direction]
+                            next_x, next_y = x + dx, y + dy
+                            next_coord = (next_x, next_y)
+
+                            # hangi komsu oldugunu bulduktan sonra oradaki duvarı yıkıyorum.
+                            if 0 <= next_x < self.width and 0 <= next_y < self.height:
+                                if next_coord in visited and self.grid[next_x][next_y] not in self.ft_cell:
+                                    self.destroy_wall(current_coord, next_coord)
+                                    visited.add(current_coord)
+                                    any_cell_fixed = True
+                                    break
+
+            return any_cell_fixed
+ """
     def chechker_3x3(self) -> bool:
         start_x = self.entry[0]
         start_y = self.entry[1]
-        # bu if blokunu nasıl kısaltacagımı bilmiyorum :()
         if start_x < 0 or start_y < 0:
             return False  # burada dış sınırlara taşıyor mu diye baktım
         if start_x + 2 >= self.width or start_y + 2 >= self.height:
@@ -494,27 +517,17 @@ class Maze():
                     return False
         return True
 
-    # def generate(self):
-    #     self.ft_write()
-    #     self.create_guaranteed_path()
-    #     self.random_broker()
-    #     while True:
-    #         while self.perfect_maker():
-    #             pass
-    #         cells_fixed = self.fix_isolated_cells()
-    #         if not cells_fixed:
-    #             break
-    #     return self.find_solution_ways()
 
     def generate(self):
             self.ft_write()
             self.create_guaranteed_path()
             self.random_broker()
 
-            while True:
-                cells_fixed = self.fix_isolated_cells()
-                if not cells_fixed:
-                    break
-            return self.find_solution_ways()
+            if self.perfect == True:
+                while self.perfect_maker():
+                    while True:
+                        cells_fixed = self.fix_isolated_cells()
+                        if not cells_fixed:
+                            break
 
-# perfect olmayan maze
+            return self.find_solution_ways()

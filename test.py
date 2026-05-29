@@ -88,7 +88,7 @@ def run_interactive_maze(width: int, height: int):
     color_scheme = 0  # 0: Standart, 1: Alternatif Renk Modu
 
     # İlk labirenti oluşturuyoruz
-    maze = Maze(width, height, entry=(0, 0), exit=(width - 1, height - 1), perfect=True, seed=None)
+    maze = Maze(width, height, entry=(0, 0), exit=(width - 5, height - 7), perfect=True, seed=None)
     final_paths = maze.generate()
     maze.fix_isolated_cells()
 
