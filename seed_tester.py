@@ -1,7 +1,7 @@
 import os
 import random
 import typing
-from maze_ing import Maze
+from maze_ing import Maze, generate
 
 def run_interactive_maze(width: int, height: int, seed: typing.Optional[int] = None):
     # --- 1. UYGULAMA DURUM DEĞİŞKENLERİ (STATE) ---
@@ -15,7 +15,7 @@ def run_interactive_maze(width: int, height: int, seed: typing.Optional[int] = N
 
     # İlk labirenti mevcut seed ile oluşturuyoruz
     maze = Maze(width, height, entry=entry_coord, exit=exit_coord, perfect=True, seed=current_seed)
-    final_paths = maze.generate()
+    final_paths = generate(maze)
     maze.fix_isolated_cells()
 
     while True:
@@ -100,7 +100,7 @@ def run_interactive_maze(width: int, height: int, seed: typing.Optional[int] = N
         if choice == "1":
             # Mevcut seed parametresi ile yeniden üretim testi
             maze = Maze(width, height, entry=entry_coord, exit=exit_coord, perfect=True, seed=current_seed)
-            final_paths = maze.generate()
+            final_paths = generate(maze)
             maze.fix_isolated_cells()
 
         elif choice == "2":
@@ -114,7 +114,7 @@ def run_interactive_maze(width: int, height: int, seed: typing.Optional[int] = N
             current_seed = int(seed_input) if seed_input.isdigit() else None
             # Yeni seed girildiğinde otomatik olarak haritayı tetikliyoruz
             maze = Maze(width, height, entry=entry_coord, exit=exit_coord, perfect=True, seed=current_seed)
-            final_paths = maze.generate()
+            final_paths = generate(maze)
             maze.fix_isolated_cells()
 
         elif choice == "5":

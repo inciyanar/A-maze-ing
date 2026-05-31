@@ -59,11 +59,18 @@ class Maze():
                                             (5, 4), (6, 4), (6, 3), (6, 2),
                                             (5, 2), (4, 2), (4, 1), (4, 0),
                                             (4, 0), (5, 0), (6, 0)]
+            5,1-4,1
+            4,3-3,3
             for (x, y) in coord:
                 target_x = a + x
                 target_y = b + y
                 if 0 <= target_x < self.width and 0 <= target_y < self.height:
                     self.ft_cell.append(self.grid[a + x][b + y])  # b+y dediğimizde -'li koordinatlar geliyor o yüzden - dememiz lazım ama emin değilim
+
+            if 0 <= a + 4 < self.width and 0 <= b + 3 < self.height:
+                self.destroy_wall((a + 4, b + 3), (a + 3, b + 3))
+            if 0 <= a + 7 < self.width and 0 <= b + 1 < self.height:
+                self.destroy_wall((a + 6, b + 1), (a + 7, b + 1))
 
     def out_wall(self):
         for x in range(self.width):
@@ -265,7 +272,7 @@ class Maze():
             return open_neighbors
 
 
-    def find_solution_ways(self):
+    def find_solution_ways(self) -> list[list[tuple[int, int]]]:
         start = self.entry
         end = self.exit
 
@@ -518,16 +525,14 @@ class Maze():
         return True
 
 
-    def generate(self):
-            self.ft_write()
-            self.create_guaranteed_path()
-            self.random_broker()
-
-            if self.perfect == True:
-                while self.perfect_maker():
-                    while True:
-                        cells_fixed = self.fix_isolated_cells()
-                        if not cells_fixed:
-                            break
-
-            return self.find_solution_ways()
+def generate(maze: Maze):  
+    maze.ft_write()
+    maze.create_guaranteed_path()
+    maze.random_broker()
+    if maze.perfect == True:
+        while maze.perfect_maker():
+            while True:
+                cells_fixed = maze.fix_isolated_cells()
+                if not cells_fixed:
+                    break
+    return maze.find_solution_ways()

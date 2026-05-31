@@ -1,65 +1,56 @@
 import sys
-from typing import List, Tuple
 from pars_ing import ConfigParser
-from maze_ing import Maze
-
-def convert_path_to_string(path: list[tuple[int, int]]) -> str:
-        """
-        Output file'a hexten sonra çözüm yolu da yazdırılacak ama elimizde
-        hep koordint var onu dönüştürme fonksiyonu
-        """
-        if not path or len(path) < 2:
-            return ""
-
-        direction_letters: list[str] = []
-
-        # Yol üzerindeki koordinatlara bakıcaz
-        for i in range(len(path) - 1):
-            curr_x, curr_y = path[i]
-            next_x, next_y = path[i + 1]
-
-            dx = next_x - curr_x
-            dy = next_y - curr_y
-
-            if dx == 0 and dy == 1:
-                direction_letters.append("N")
-            elif dx == 1 and dy == 0:
-                direction_letters.append("E")
-            elif dx == 0 and dy == -1:
-                direction_letters.append("S")
-            elif dx == -1 and dy == 0:
-                direction_letters.append("W")
-            else:
-                raise ValueError(
-                    f"Invalid path step: from {path[i]} to {path[i+1]} dne!"  # düzelticez mesajı
-                )
-
-        return "".join(direction_letters)  # tüm yönleri tek str içinde toplar
+from maze_ing import Maze, generate
+from output_file_helpers import write_output_file
+from render import Render
 
 
-def write_output_file(file_path: str, maze: Maze, shortest_path: List[Tuple[int, int]]) -> None:
+def run_maze_render(maze: Maze) -> None:
     """
-    Labirenti ve çözüm yolunu subject dökümanında (IV.5) belirtilen katı formatta dosyaya yazar.
+    Dökümandaki Chapter V kurallarına birebir uyumlu interaktif menü döngüsü.
     """
-    # Yön harflerine dönüştürme
-    path_str: str = convert_path_to_string(shortest_path)
-    
-    file = open(file_path, "w", encoding="utf-8") 
-    try:
-        # labirent hex format, bizim testerlar da hep reverse basıyordu 
-        # hem maze'i hem hex kısmını, burda da öyle yapmak gerekti
-        for y in reversed(range(maze.height)):
-            row_hex: List[str] = [f"{maze.grid[x][y].wallnbr:X}" for x in range(maze.width)]
-            file.write("".join(row_hex) + "\n")
-            
-        file.write("\n")
+    show_path: bool = True
+    renderer = Render()
+    current_maze = maze
+    while True:
+        print("\033[H\033[J", end="")
+        renderer.render(current_maze, show_path)
+        # menü
+        print("\nA-Maze-ing======")
+        print("1. Re-generate a new maze")
+        print("2. Show/Hide path from entry to exit")
+        print("3. Rotate maze colors")
+        print("4. Quit")
+
+        choice: str = input("Choice? (1-4): ").strip()
         
-        # entry \n exit \n solution
-        file.write(f"{maze.entry[0]},{maze.entry[1]}\n{maze.exit[0]},"
-                   f"{maze.exit[1]}\n{path_str}\n")
-    except:
-        file.close()  # hata olursa dosyayı kapatıyoruz.
-
+        if choice == "1":
+            if maze.seed is None:
+                # 1. Senaryo: Eğer config'de seed YOKSA, gerçek rastgelelik (None) ver
+                next_seed = None
+            else:
+                # 2. Senaryo: Eğer config'de seed VARSA, o orijinal seed'i tekrar ver (Eski harita basılsın)
+                next_seed = maze.seed
+            current_maze = Maze(
+                                width=current_maze.width,
+                                height=current_maze.height,
+                                entry=current_maze.entry,
+                                exit=current_maze.exit,
+                                perfect=current_maze.perfect,
+                                seed= next_seed
+                            )
+            final_paths = generate(current_maze)
+            while not final_paths:
+                final_paths = generate(current_maze)
+        elif choice == "2":
+            # Çözüm yolunu açar veya kapatır
+            show_path = not show_path
+        elif choice == "3":
+            # Render sınıfının içindeki renk durumunu (state) rastgele günceller
+            renderer.random_theme()
+        elif choice == "4":
+            print("\nQuitting the application.")
+            break
 
 def main() -> None:
     """
@@ -67,9 +58,8 @@ def main() -> None:
     """
     # 1. Komut satırı argüman kontrolü (Zorunlu kural)
     if len(sys.argv) != 2:
-        print("Error. Your program must be run with the python3 a_maze_ing.py "
-              "config.txt", file=sys.stderr)
-        sys.argv = [sys.argv[0], "config.txt"]
+        sys.stderr.write("Error. Your program must be run with the python3 a_maze_ing.py "
+              "config.txt")
         sys.exit(1)
 
     config_file: str = sys.argv[1]
@@ -83,32 +73,23 @@ def main() -> None:
         # veri çekme
         width: int = parser.data["WIDTH"]
         height: int = parser.data["HEIGHT"]
-        entry: Tuple[int, int] = parser.data["ENTRY"]
-        maze_exit: Tuple[int, int] = parser.data["EXIT"]
+        entry: tuple[int, int] = parser.data["ENTRY"]
+        maze_exit: tuple[int, int] = parser.data["EXIT"]
         perfect: bool = parser.data["PERFECT"]
         output_file: str = parser.data["OUTPUT_FILE"]
-        
-        # eğer configde SEED tanımlanmışsa alıyoruz
-        seed_val = int(parser.data["SEED"]) if "SEED" in parser.data else None
-
+        seed_val = parser.data.get("SEED")
         # labirent generate
         maze = Maze(width=width, height=height, entry=entry, exit=maze_exit, perfect=perfect, seed=seed_val)
-        final_paths = maze.generate()
+        final_paths = generate(maze)
 
         while not final_paths:
-            final_paths = maze.generate()
+            final_paths = generate(maze)
 
         # output file'a yazma
         write_output_file(output_file, maze, final_paths[0])
 
         # Render için fonksiyon yazılacak
-
-
-
-
-
-
-
+        run_maze_render(maze)
     except Exception as error:
         print(f"\nError: {error}", file=sys.stderr)
         sys.exit(1)

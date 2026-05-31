@@ -80,6 +80,15 @@ class ConfigParser:
             validated_data["PERFECT"] = False
         else:
             raise ValueError("Configuration Error: PERFECT must be bool!")
+        # Eğer config içinde SEED tanımlanmışsa, silinmesini engelle ve validated_data'ya taşı
+        if "SEED" in self.data:
+            try:
+                validated_data["SEED"] = int(self.data["SEED"])
+            except ValueError:
+                raise ValueError("Configuration Error: SEED must be an integer!")
+
+        self.data = validated_data
+        # Artık güvenle temizlenmiş veriyi asıl sözlüğe aktarabiliriz
         # Eğer gelen metin "True" ise True (bool), "False" ise False (bool)
         # olur, ikisi de değilse hata fırlatır diye düşündüm ama büyük harf
         # küçük harf duyarlılığımızı bilemiyorum...
