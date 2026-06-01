@@ -377,7 +377,6 @@ class Maze():
             all_paths.sort(key=len)  # en kısa olandan uzun olana sıraladı
             main_path = all_paths[0]  # en kısa olana ana yol dedim
 
-
             main_edges = set()
             for i in range(len(main_path) - 1):
                 # Yönden bağımsız olmak için koordinatları sıralayıp tuple yapıyoruz
@@ -391,26 +390,43 @@ class Maze():
                     next_cell = path[i+1]
                     edge = tuple(sorted([curr_cell, next_cell]))
                     if edge not in main_edges:
-                        if self.build_wall(curr_cell, next_cell) == True:
-                            this_turn_built = True
-                            wall_built = True
-                            # döngünün en başına dönüldüğünde this_turn_buillt
-                            #  sıfırlanacak ama biz en az bile bir duvar
-                            # ördüysek return True edebilmek iiçin bunu
-                            # kullanıyoruz
-                            break # İçteki for'u kır, bir sonraki alternatife git (veya while başına dön)
+                        attempt = 0
+                        while True:
+                            attempt += 1
+                            # Eğer 50 kere rastgele deneyip kapatacak yer bulamadıysan ekimizdeki i'yi kullanalım
+                            if attempt > 50:
+                                k = i
+                            else:
+                                k = random.randint(i, len(path) - 2)
+                            # path üzerinde ayrıştıktan sonra random iki kücre arasına duvar öreriz. 
+                            curr_cell = path[k]
+                            next_cell = path[k + 1]
+                            edge = tuple(sorted([curr_cell, next_cell]))
+
+                            if edge not in main_edges:
+                                if self.build_wall(curr_cell, next_cell) == True:
+                                    this_turn_built = True
+                                    wall_built = True
+                                    # döngünün en başına dönüldüğünde this_turn_buillt
+                                    #  sıfırlanacak ama biz en az bile bir duvar
+                                    # ördüysek return True edebilmek için bunu
+                                    # kullanıyoruz
+                                    break # İçteki while'ı kırıyoruz dıştaki for'a geçiyor
+                    if this_turn_built:
+                        break
                 if this_turn_built:
                     break # Bu alternatif yollardan birine duvar ördük, harita değişti!
                       # O yüzden alt yolları gezmeyi bırakıp, en dıştaki while başına dönüp
                       # find_solution_ways()'i taze verilerle yeniden çalıştırmak için burayı da kırıyoruz.
+            flag = True
         return wall_built
 
-    def fix_isolated_cells(self) -> bool:
-        """
+    """ def fix_isolated_cells(self) -> bool:
+        
         Perfect_maker çalıştıktan sonra haritayı son bir kez tarar.
         4 duvarı da kapalı kalmış hücreleri bulur ve onları rastgele
         bir iç komşusuna bağlar.
-        """
+        
         directions = ["NORTH", "EAST", "SOUTH", "WEST"]
         moves = {
             "NORTH": (0, 1), "SOUTH": (0, -1), "EAST": (1, 0), "WEST": (-1, 0)
@@ -439,66 +455,66 @@ class Maze():
                                     any_cell_fixed = True
                                     break # Tek bir duvar yıkıp kurtarmamız yeterli, sonraki hücreye geç
         return any_cell_fixed
-
+ """
     from collections import deque  # çektim ama tanımadı, neden anlamadım
 
-    """     def fix_isolated_cells(self) -> bool:
+    def fix_isolated_cells(self) -> bool:
 
-            # bu fonksiyonda girişten başlayarak ulaşabildigimiz tüm hücrelere ulaşıyoruz,
-            # ulaşamadıklarımız isolated demektir.
-            start_coord = self.entry
-            visited = set()  # ziyaret edilen yerlerin kümesi, bu olmadıgı için patladık
+        # bu fonksiyonda girişten başlayarak ulaşabildigimiz tüm hücrelere ulaşıyoruz,
+        # ulaşamadıklarımız isolated demektir.
+        start_coord = self.entry
+        visited = set()  # ziyaret edilen yerlerin kümesi, bu olmadıgı için patladık
 
-            tail = self.deque([start_coord])  # deque olan bir kuyruk ekliyorum.
-            # bu kuyruk kontrol edilecek olan hücreleri tutuyor, tek tek buradan alıp
-            # döngüye sokuyoruz
-            visited.add(start_coord)
+        tail = self.deque([start_coord])  # deque olan bir kuyruk ekliyorum.
+        # bu kuyruk kontrol edilecek olan hücreleri tutuyor, tek tek buradan alıp
+        # döngüye sokuyoruz
+        visited.add(start_coord)
 
-            moves = {"NORTH": (0, 1), "SOUTH": (0, -1), "EAST": (1, 0), "WEST": (-1, 0)}
+        moves = {"NORTH": (0, 1), "SOUTH": (0, -1), "EAST": (1, 0), "WEST": (-1, 0)}
 
-            # kuyrukta hücre kalmayana kadar devam et
-            while tail:
-                curr_x, curr_y = tail.popleft()  # normalde pop kullanmıştık, deque oldugu
-                # için artık popleft, kuyrugun en önü oluyor.buradan hücre çekiyorum
-                curr_cell = self.grid[curr_x][curr_y]
+        # kuyrukta hücre kalmayana kadar devam et
+        while tail:
+            curr_x, curr_y = tail.popleft()  # normalde pop kullanmıştık, deque oldugu
+            # için artık popleft, kuyrugun en önü oluyor.buradan hücre çekiyorum
+            curr_cell = self.grid[curr_x][curr_y]
 
-                for direction, (dx, dy) in moves.items():
-                    if curr_cell.walls.get(direction, 1) == 0:  # yol açık ise
-                        nx, ny = curr_x + dx, curr_y + dy
+            for direction, (dx, dy) in moves.items():
+                if curr_cell.walls.get(direction, 1) == 0:  # yol açık ise
+                    nx, ny = curr_x + dx, curr_y + dy
 
-                        if 0 <= nx < self.width and 0 <= ny < self.height:  # labirent sınırlarındaysa
-                            if (nx, ny) not in visited:
-                                visited.add((nx, ny))  # ziyaret kümesine ekler
-                                tail.append((nx, ny))  # dequenin sonuna ekler
+                    if 0 <= nx < self.width and 0 <= ny < self.height:  # labirent sınırlarındaysa
+                        if (nx, ny) not in visited:
+                            visited.add((nx, ny))  # ziyaret kümesine ekler
+                            tail.append((nx, ny))  # dequenin sonuna ekler
 
-            # artık girişten itibaren ulaşılabilen tüm hücreler visited içinde
-            any_cell_fixed = False
+        # artık girişten itibaren ulaşılabilen tüm hücreler visited içinde
+        any_cell_fixed = False
 
-            for x in range(self.width):  # tüm haritayı tarıyorum
-                for y in range(self.height):
-                    current_coord = (x, y)
+        for x in range(self.width):  # tüm haritayı tarıyorum
+            for y in range(self.height):
+                current_coord = (x, y)
 
-                    if current_coord not in visited and self.grid[x][y] not in self.ft_cell:
-                        # eğer hücre izole ise, 4 komsusuna bakıyorum random, hangisi visited içinde
-                        # onu bulmam lazim
-                        directions = list(moves.keys())
-                        random.shuffle(directions)
+                if current_coord not in visited and self.grid[x][y] not in self.ft_cell:
+                    # eğer hücre izole ise, 4 komsusuna bakıyorum random, hangisi visited içinde
+                    # onu bulmam lazim
+                    directions = list(moves.keys())
+                    random.shuffle(directions)
 
-                        for direction in directions:
-                            dx, dy = moves[direction]
-                            next_x, next_y = x + dx, y + dy
-                            next_coord = (next_x, next_y)
+                    for direction in directions:
+                        dx, dy = moves[direction]
+                        next_x, next_y = x + dx, y + dy
+                        next_coord = (next_x, next_y)
 
-                            # hangi komsu oldugunu bulduktan sonra oradaki duvarı yıkıyorum.
-                            if 0 <= next_x < self.width and 0 <= next_y < self.height:
-                                if next_coord in visited and self.grid[next_x][next_y] not in self.ft_cell:
-                                    self.destroy_wall(current_coord, next_coord)
-                                    visited.add(current_coord)
-                                    any_cell_fixed = True
-                                    break
+                        # hangi komsu oldugunu bulduktan sonra oradaki duvarı yıkıyorum.
+                        if 0 <= next_x < self.width and 0 <= next_y < self.height:
+                            if next_coord in visited and self.grid[next_x][next_y] not in self.ft_cell:
+                                self.destroy_wall(current_coord, next_coord)
+                                visited.add(current_coord)
+                                any_cell_fixed = True
+                                break
 
-            return any_cell_fixed
- """
+        return any_cell_fixed
+
     def chechker_3x3(self) -> bool:
         start_x = self.entry[0]
         start_y = self.entry[1]

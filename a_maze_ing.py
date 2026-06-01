@@ -59,7 +59,7 @@ def main() -> None:
     # 1. Komut satırı argüman kontrolü (Zorunlu kural)
     if len(sys.argv) != 2:
         sys.stderr.write("Error. Your program must be run with the python3 a_maze_ing.py "
-              "config.txt")
+              "<config.txt>")
         sys.exit(1)
 
     config_file: str = sys.argv[1]

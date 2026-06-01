@@ -16,6 +16,5 @@ AI usage
 -
 
 notes:
-benim yazdığım isoleted_cell'i denedim bende doğru çalıştı aslında...
-Terminal Arayüzünü Başlatmak için fonksiyon yazılacak
 hata mesajları konusunda kafam karışık...
+42 yazmazsa mesaj

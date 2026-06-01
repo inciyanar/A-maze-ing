@@ -34,7 +34,7 @@ class ConfigParser:
             # en son 'finally' bloğuna uğrar ve dosyayı kapatır. Subjectte uyarmış
             file.close()
             for key, value in self.data.items():
-                print(f"{key}: {value}")
+                print(f"{key} = {value}")
 
     def check_data(self) -> None:
         mandatory_keys = ["WIDTH", "HEIGHT", "ENTRY", "EXIT", "OUTPUT_FILE", "PERFECT"]
