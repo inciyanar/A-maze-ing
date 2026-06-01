@@ -42,20 +42,19 @@ def write_output_file(file_path: str, maze: Maze, shortest_path: list[tuple[int,
     """
     # Yön harflerine dönüştürme
     path_str: str = convert_path_to_string(shortest_path)
-    
-    file = open(file_path, "w", encoding="utf-8") 
+
+    file = open(file_path, "w", encoding="utf-8")
     try:
-        # labirent hex format, bizim testerlar da hep reverse basıyordu 
+        # labirent hex format, bizim testerlar da hep reverse basıyordu
         # hem maze'i hem hex kısmını, burda da öyle yapmak gerekti
         for y in reversed(range(maze.height)):
             row_hex: list[str] = [f"{maze.grid[x][y].wallnbr:X}" for x in range(maze.width)]
             file.write("".join(row_hex) + "\n")
-            
+
         file.write("\n")
-        
+
         # entry \n exit \n solution
         file.write(f"{maze.entry[0]},{maze.entry[1]}\n{maze.exit[0]},"
                    f"{maze.exit[1]}\n{path_str}\n")
     except:
         file.close()  # hata olursa dosyayı kapatıyoruz.
-

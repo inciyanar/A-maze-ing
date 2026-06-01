@@ -45,9 +45,9 @@ class Maze():
             self.grid.append(current_column)
         if self.seed is not None:
             random.seed(self.seed)  # randoma bağlı kullandığımız fonksiyonların
-            # random.shuffle(), random.randint() fln, her çalıştırmada aynı seçimi
-            # yapmasını sağlayan bi işlevi varmış en çok nasıl hallederiz dediğim
-            # şeyin bu kadar kolay hallolmasına şokum...
+        #     # random.shuffle(), random.randint() fln, her çalıştırmada aynı seçimi
+        #     # yapmasını sağlayan bi işlevi varmış en çok nasıl hallederiz dediğim
+        #     # şeyin bu kadar kolay hallolmasına şokum...
         self.out_wall()
         self.ft_write()  # bu ikisini direkt burda da en başta kararlaştırabilirmişiz
     def ft_write(self) -> None:
@@ -215,7 +215,7 @@ class Maze():
             for y in range(1, self.height - 1):
                 current_cell = self.grid[x][y]
                 if current_cell not in self.ft_cell:
-                    cell_break_count = random.randint(0, 2)  # o hicrede kaç duvar yıkacağımı seçiyorum, 
+                    cell_break_count = random.randint(0, 2)  # o hicrede kaç duvar yıkacağımı seçiyorum,
                                                              # 4 diyince çok da yıkabiliyo 2'ye düşürdüm
 
                     chosen_directions = random.sample(directions,
@@ -230,7 +230,7 @@ class Maze():
                             next_cell = self.grid[next_x][next_y]
                             if next_cell not in self.ft_cell:
                                 self.destroy_wall((x, y), (next_x, next_y))
-                                # elimizde checker var ama kullanmamışız ki hiç.... ya buraya 
+                                # elimizde checker var ama kullanmamışız ki hiç.... ya buraya
                                 # ya da destroy walla ekleyip kontrol etmek lazım ilk burası gelmişti aklıma
                                 # şimdi düşününce destroy wall daha mantıklı geldi...... yarın tekrar düşünücem
                                 start_x_min = max(0, x - 2)
@@ -398,7 +398,7 @@ class Maze():
                                 k = i
                             else:
                                 k = random.randint(i, len(path) - 2)
-                            # path üzerinde ayrıştıktan sonra random iki kücre arasına duvar öreriz. 
+                            # path üzerinde ayrıştıktan sonra random iki kücre arasına duvar öreriz.
                             curr_cell = path[k]
                             next_cell = path[k + 1]
                             edge = tuple(sorted([curr_cell, next_cell]))
@@ -422,11 +422,11 @@ class Maze():
         return wall_built
 
     """ def fix_isolated_cells(self) -> bool:
-        
+
         Perfect_maker çalıştıktan sonra haritayı son bir kez tarar.
         4 duvarı da kapalı kalmış hücreleri bulur ve onları rastgele
         bir iç komşusuna bağlar.
-        
+
         directions = ["NORTH", "EAST", "SOUTH", "WEST"]
         moves = {
             "NORTH": (0, 1), "SOUTH": (0, -1), "EAST": (1, 0), "WEST": (-1, 0)
@@ -539,7 +539,7 @@ class Maze():
         return True
 
 
-def generate(maze: Maze):  
+def generate(maze: Maze):
     maze.ft_write()
     maze.create_guaranteed_path()
     maze.random_broker()
@@ -549,4 +549,9 @@ def generate(maze: Maze):
                 cells_fixed = maze.fix_isolated_cells()
                 if not cells_fixed:
                     break
+    if maze.perfect == False:
+        while maze:
+                cells_fixed = maze.fix_isolated_cells()
+                if not cells_fixed:
+                        break
     return maze.find_solution_ways()
