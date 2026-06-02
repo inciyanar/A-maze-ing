@@ -34,6 +34,7 @@ class Maze():
         self.ft_cell: list[Cell] = []
         self.perfect = perfect
         self.seed = seed
+        self.warning_message: str = ""
         self.entry = entry
         self.exit = exit
         self.outer_walls: set[tuple[tuple[int, int], str]] = set()  # !hangi koordinatta hangi yönde duvar zorunlu diye bakıcaz
@@ -69,6 +70,10 @@ class Maze():
                 self.destroy_wall((a + 4, b + 3), (a + 3, b + 3))
             if 0 <= a + 7 < self.width and 0 <= b + 1 < self.height:
                 self.destroy_wall((a + 6, b + 1), (a + 7, b + 1))
+        else:
+            with open("debug_log.txt", "w") as f:
+                f.write("Error: Maze is too small to fit the 42 sign.\n")  # burada çıktıyı ekrana alamıyorum
+                # ben de bi dosyaya yazdirayim dedim.
 
     def out_wall(self):
         for x in range(self.width):
@@ -541,6 +546,10 @@ class Maze():
 
 def generate(maze: Maze):
     maze.ft_write()
+    if any(Cell.coordinate == maze.entry for Cell in maze.ft_cell):
+        raise ValueError("Error: Entry coordinates cannot be on the 42 sign.")
+    if any(Cell.coordinate == maze.exit for Cell in maze.ft_cell):
+        raise ValueError("Error: Exit coordinates cannot be on the 42 sign.")
     maze.create_guaranteed_path()
     maze.random_broker()
     if maze.perfect == True:
@@ -554,4 +563,6 @@ def generate(maze: Maze):
                 cells_fixed = maze.fix_isolated_cells()
                 if not cells_fixed:
                         break
+    if maze.warning_message:
+        print(maze.warning_message)
     return maze.find_solution_ways()
