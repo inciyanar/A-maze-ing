@@ -52,7 +52,7 @@ class Maze():
         self.out_wall()
         self.ft_write()  # bu ikisini direkt burda da en başta kararlaştırabilirmişiz
     def ft_write(self) -> None:
-        if self.width >= 8 and self.height >= 6:
+        if self.width > 8 and self.height > 6:
             a: int = (self.width - 7) // 2  # // yapınca int'e kesiyo
             b: int = (self.height - 5) // 2
             coord: list[tuple[int, int]] = [(2, 0), (2, 1), (2, 2), (1, 2),
@@ -64,7 +64,8 @@ class Maze():
                 target_x = a + x
                 target_y = b + y
                 if 0 <= target_x < self.width and 0 <= target_y < self.height:
-                    self.ft_cell.append(self.grid[a + x][b + y])  # b+y dediğimizde -'li koordinatlar geliyor o yüzden - dememiz lazım ama emin değilim
+                    if (target_x, target_y) != self.entry and (target_x, target_y) != self.exit:
+                        self.ft_cell.append(self.grid[a + x][b + y])  # b+y dediğimizde -'li koordinatlar geliyor o yüzden - dememiz lazım ama emin değilim
 
             if 0 <= a + 4 < self.width and 0 <= b + 3 < self.height:
                 self.destroy_wall((a + 4, b + 3), (a + 3, b + 3))
@@ -164,7 +165,8 @@ class Maze():
 
             moves = {"NORTH": (0, 1), "SOUTH": (0, -1), "EAST": (1, 0), "WEST": (-1, 0)}
 
-            while current != end:
+            while current[0] != end[0] or current[1] != end[1]:
+                print("selam")
                 curr_x, curr_y = current
                 directions = ["NORTH", "EAST", "SOUTH", "WEST"]
                 random.shuffle(directions)
@@ -559,10 +561,9 @@ def generate(maze: Maze):
                 if not cells_fixed:
                     break
     if maze.perfect == False:
-        while maze:
-                cells_fixed = maze.fix_isolated_cells()
-                if not cells_fixed:
-                        break
+        cells_fixed = True
+        while cells_fixed:
+            cells_fixed = maze.fix_isolated_cells()
     if maze.warning_message:
         print(maze.warning_message)
     return maze.find_solution_ways()

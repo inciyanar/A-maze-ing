@@ -1,0 +1,1 @@
+Error: Maze is too small to fit the 42 sign.
