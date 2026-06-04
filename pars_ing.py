@@ -11,7 +11,7 @@ class ConfigParser:
     def parsing(self) -> None:
         if not os.path.exists(self.config_path):  # dosya var mı kontrolü
             raise FileNotFoundError(
-                f"Hata: Yapılandırma dosyası bulunamadı: '{self.config_path}'"
+                f"Error: Config file not found: '{self.config_path}'"
             )
         file: TextIO = open(self.config_path, 'r', encoding="utf-8")  # bi dosyayı binary vs de her türlü okusun diye utf-8 diyoruz
         try:  # dosyayı okurken ayırırken vs hata alırsak diye işlemleri try bloğu içinde yapıcaz
@@ -30,7 +30,7 @@ class ConfigParser:
                 value = splversion[1].strip()
                 self.data[key] = value
         finally:
-            # Yukarıdaki (örneğin ValueError) bir hata oluşursa 
+            # Yukarıdaki (örneğin ValueError) bir hata oluşursa
             # en son 'finally' bloğuna uğrar ve dosyayı kapatır. Subjectte uyarmış
             file.close()
             for key, value in self.data.items():
@@ -70,8 +70,8 @@ class ConfigParser:
             raise ValueError("Configuration Error: ENTRY coordinates are out of maze bounds!")
         if not (0 <= maze_exit[0] < width and 0 <= maze_exit[1] < height):
             raise ValueError("Configuration Error: EXIT coordinates are out of maze bounds!")
-        
-        # Perfect kontrolünden emin olamadım bool bir tip olması için ne 
+
+        # Perfect kontrolünden emin olamadım bool bir tip olması için ne
         # yapmak lazım diye ama böyle diyince oluyo galiba
         self.data["PERFECT"] = self.data["PERFECT"].upper()
         if self.data["PERFECT"] == "TRUE":

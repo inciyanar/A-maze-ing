@@ -64,17 +64,18 @@ class Maze():
                 target_x = a + x
                 target_y = b + y
                 if 0 <= target_x < self.width and 0 <= target_y < self.height:
-                    if (target_x, target_y) != self.entry and (target_x, target_y) != self.exit:
-                        self.ft_cell.append(self.grid[a + x][b + y])  # b+y dediğimizde -'li koordinatlar geliyor o yüzden - dememiz lazım ama emin değilim
+                    self.ft_cell.append(self.grid[a + x][b + y])  # b+y dediğimizde -'li koordinatlar geliyor o yüzden - dememiz lazım ama emin değilim
 
             if 0 <= a + 4 < self.width and 0 <= b + 3 < self.height:
                 self.destroy_wall((a + 4, b + 3), (a + 3, b + 3))
             if 0 <= a + 7 < self.width and 0 <= b + 1 < self.height:
                 self.destroy_wall((a + 6, b + 1), (a + 7, b + 1))
         else:
-            with open("debug_log.txt", "w") as f:
-                f.write("Error: Maze is too small to fit the 42 sign.\n")  # burada çıktıyı ekrana alamıyorum
-                # ben de bi dosyaya yazdirayim dedim.
+            msg = "Error: Maze is too small to fit the 42 sign."
+            self.warning_message = msg  # maze içine tanımlayıp renderdan sonra çağırıyorum mesajı
+            # with open("debug_log.txt", "w") as f:
+            #     f.write("Error: Maze is too small to fit the 42 sign.\n")  # burada çıktıyı ekrana alamıyorum
+            #     # ben de bi dosyaya yazdirayim dedim.
 
     def out_wall(self):
         for x in range(self.width):
@@ -166,7 +167,6 @@ class Maze():
             moves = {"NORTH": (0, 1), "SOUTH": (0, -1), "EAST": (1, 0), "WEST": (-1, 0)}
 
             while current[0] != end[0] or current[1] != end[1]:
-                print("selam")
                 curr_x, curr_y = current
                 directions = ["NORTH", "EAST", "SOUTH", "WEST"]
                 random.shuffle(directions)
@@ -555,11 +555,12 @@ def generate(maze: Maze):
     maze.create_guaranteed_path()
     maze.random_broker()
     if maze.perfect == True:
-        while maze.perfect_maker():
-            while True:
-                cells_fixed = maze.fix_isolated_cells()
-                if not cells_fixed:
-                    break
+        while maze.perfect_maker(): # önce bi perfect maker çalışssın
+            pass # çalıştıktan sonra
+        while True:
+            cells_fixed = maze.fix_isolated_cells()
+            if not cells_fixed:
+                break
     if maze.perfect == False:
         cells_fixed = True
         while cells_fixed:
@@ -567,3 +568,7 @@ def generate(maze: Maze):
     if maze.warning_message:
         print(maze.warning_message)
     return maze.find_solution_ways()
+
+# burada özellikle küçük mazelerde labirentin random oluşturuken bazen tam perfect oluyor ve
+# perfect maker a girmesine gerek kalmıyor. o zaman da fix isolated cellere girmiyordu. o yüzden
+# o satırı güncelliyorum.

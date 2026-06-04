@@ -13,9 +13,12 @@ def run_maze_render(maze: Maze) -> None:
     renderer = Render()
     current_maze = maze
     while True:
-        print("\033[H\033[J", end="")
+        # print("\033[H\033[J", end="") buna gerek yok, render içinde terminali temizleyen bir kod var zaten
         renderer.render(current_maze, show_path)
         # menü
+        if maze.warning_message:
+            print(f"\n\033[33m{maze.warning_message}\033[0m")  # maze basılmasına rağmen error gördüğümüz tek senaryo
+            # eğer böyle bişi varsa burada bastırıyorum
         print("\nA-Maze-ing======")
         print("1. Re-generate a new maze")
         print("2. Show/Hide path from entry to exit")
@@ -23,7 +26,7 @@ def run_maze_render(maze: Maze) -> None:
         print("4. Quit")
 
         choice: str = input("Choice? (1-4): ").strip()
-        
+
         if choice == "1":
             if maze.seed is None:
                 # 1. Senaryo: Eğer config'de seed YOKSA, gerçek rastgelelik (None) ver
