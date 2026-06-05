@@ -1,96 +1,102 @@
-from typing import Any, TextIO
-import sys
+from typing import Any
 import os
 
-class ConfigParser:
 
+class ConfigParser:
+    """
+    Handles loading, token parsing, structural validation of
+    data parameters inside configuration files.
+    Attributes:
+        config_path (str): Location of text configurations.
+        data (dict): Stored parameter records.
+    """
     def __init__(self, config_path: str):
+        """Initializes ConfigParser settings."""
         self.config_path: str = config_path
-        self.data: dict[str, Any] = {}  # Ayarları bir sözlükte tutacağız
+        self.data: dict[str, Any] = {}
 
     def parsing(self) -> None:
-        if not os.path.exists(self.config_path):  # dosya var mı kontrolü
+        """
+        Reads files line by line, cleans syntax elements
+        and stores config mappings.
+        Skips comment lines prefixed with '#'.
+        """
+        if not os.path.exists(self.config_path):
             raise FileNotFoundError(
                 f"Error: Config file not found: '{self.config_path}'"
             )
-        file: TextIO = open(self.config_path, 'r', encoding="utf-8")  # bi dosyayı binary vs de her türlü okusun diye utf-8 diyoruz
-        try:  # dosyayı okurken ayırırken vs hata alırsak diye işlemleri try bloğu içinde yapıcaz
+        with open(self.config_path, 'r', encoding="utf-8") as file:
             data: str = file.read()
             lines: list[str] = data.splitlines()
             for item in lines:
                 item = item.strip()
-                if not item or item[0] == '#':  # boş ya da yorum olan satırları geçiyoruz direkt
+                if not item or item[0] == '#':
                     continue
                 if "=" not in item:
                     raise ValueError(
-                        f"Value Error in {self.config_path}: Invalid syntax on line -> '{item}' (Missing '=')"
-    )
-                splversion = item.split('=', 1)  # ilk eşittirden itibaren ayırmalıymışız bir satırda 2 eşittir varsa falan çökmemesi için
-                key = splversion[0].strip()
+                        f"Value Error in {self.config_path}: Invalid syntax "
+                        f"on line -> '{item}' (Missing '=')")
+                splversion = item.split('=', 1)
+                key = splversion[0].strip().upper()
                 value = splversion[1].strip()
                 self.data[key] = value
-        finally:
-            # Yukarıdaki (örneğin ValueError) bir hata oluşursa
-            # en son 'finally' bloğuna uğrar ve dosyayı kapatır. Subjectte uyarmış
-            file.close()
-            for key, value in self.data.items():
-                print(f"{key} = {value}")
+        for key, value in self.data.items():
+            print(f"{key} = {value}")
 
     def check_data(self) -> None:
-        mandatory_keys = ["WIDTH", "HEIGHT", "ENTRY", "EXIT", "OUTPUT_FILE", "PERFECT"]
+        """
+        Runs type conversion checks, boundary assertions
+        and flag validations across parameters.
+        """
+        mandatory_keys = ["WIDTH", "HEIGHT", "ENTRY", "EXIT", "OUTPUT_FILE",
+                          "PERFECT"]
         for key in mandatory_keys:
             if key not in self.data:
-                raise KeyError(f"Configuration Error: Mandatory key '{key}' is missing!")  # Zorunlu key'ler datada yoksa hata fırlatıp kapattık
-        validated_data: dict[str, Any] = {}  # demin str olarak depolamıştık aslında, şimdi formatlıycaz
-        # formatlarken type error alırsak diye try blokları kullanıyoruz, zaten str olanları try içine almaya gerek yok
-        validated_data["OUTPUT_FILE"] = self.data["OUTPUT_FILE"]  # ör: zaten str
+                raise KeyError(f"Configuration Error: Mandatory key '{key}' is"
+                               f" missing!")
+        validated_data: dict[str, Any] = {}
+        validated_data["OUTPUT_FILE"] = self.data["OUTPUT_FILE"]
         try:
             validated_data["WIDTH"] = int(self.data["WIDTH"])
             validated_data["HEIGHT"] = int(self.data["HEIGHT"])
         except ValueError:
-            raise ValueError("Configuration Error: WIDTH and HEIGHT must be integers!")
+            raise ValueError("Configuration Error: WIDTH and HEIGHT must be "
+                             "integers!")
 
         try:
-            entry_parts = self.data["ENTRY"].split(",")
+            entry_part = self.data["ENTRY"].split(",")
             exit_parts = self.data["EXIT"].split(",")
-            validated_data["ENTRY"] = (int(entry_parts[0]), int(entry_parts[1]))
+            validated_data["ENTRY"] = (int(entry_part[0]), int(entry_part[1]))
             validated_data["EXIT"] = (int(exit_parts[0]), int(exit_parts[1]))
         except (ValueError, IndexError):
-            raise ValueError("Configuration Error: ENTRY and EXIT must be in 'x,y' integer format!")
-            # içinde virgül yoksa da int değilse de ok bi mesaj modül 3'te de böyle yapmıştım okidir i think
-        # entry ve exit maze içinde mi diye kontrol ediyorum bi de maze dim>0 mı diye
+            raise ValueError("Configuration Error: ENTRY and EXIT must be in "
+                             "'x,y' integer format!")
         width = validated_data["WIDTH"]
         height = validated_data["HEIGHT"]
         entry = validated_data["ENTRY"]
         maze_exit = validated_data["EXIT"]
 
         if width <= 0 or height <= 0:
-            raise ValueError("Configuration Error: Maze dimensions must be greater than 0!")
+            raise ValueError("Configuration Error: Maze dimensions must be "
+                             "greater than 0!")
         if not (0 <= entry[0] < width and 0 <= entry[1] < height):
-            raise ValueError("Configuration Error: ENTRY coordinates are out of maze bounds!")
+            raise ValueError("Configuration Error: ENTRY coordinates are out "
+                             "of maze bounds!")
         if not (0 <= maze_exit[0] < width and 0 <= maze_exit[1] < height):
-            raise ValueError("Configuration Error: EXIT coordinates are out of maze bounds!")
+            raise ValueError("Configuration Error: EXIT coordinates are out "
+                             "of maze bounds!")
 
-        # Perfect kontrolünden emin olamadım bool bir tip olması için ne
-        # yapmak lazım diye ama böyle diyince oluyo galiba
-        self.data["PERFECT"] = self.data["PERFECT"].upper()
-        if self.data["PERFECT"] == "TRUE":
+        perfect_str = str(self.data["PERFECT"]).upper()
+        if perfect_str == "TRUE":
             validated_data["PERFECT"] = True
-        elif self.data["PERFECT"] == "FALSE":
+        elif perfect_str == "FALSE":
             validated_data["PERFECT"] = False
         else:
             raise ValueError("Configuration Error: PERFECT must be bool!")
-        # Eğer config içinde SEED tanımlanmışsa, silinmesini engelle ve validated_data'ya taşı
         if "SEED" in self.data:
             try:
                 validated_data["SEED"] = int(self.data["SEED"])
             except ValueError:
-                raise ValueError("Configuration Error: SEED must be an integer!")
-
-        self.data = validated_data
-        # Artık güvenle temizlenmiş veriyi asıl sözlüğe aktarabiliriz
-        # Eğer gelen metin "True" ise True (bool), "False" ise False (bool)
-        # olur, ikisi de değilse hata fırlatır diye düşündüm ama büyük harf
-        # küçük harf duyarlılığımızı bilemiyorum...
-        # hatasız geldiysem self.datayı güncelleyebilirim.
+                raise ValueError("Configuration Error: SEED must "
+                                 "be an integer!")
         self.data = validated_data
