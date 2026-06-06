@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mazegen"
+version = "1.0.0"
+description = "42 A-Maze-ing Project by incyanar & edpolat"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    {name = "Eda Nur Polat", email = "edanurpolat03@gmail.com"}, 
+    {name = "İnci Yanar", email = "incinuryanar117@gmail.com"}
+]
+keywords = ["maze", "42", "perfect-maze"]
+classifiers = [
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: OS Independent",
+]
+
+[tool.hatch.build.targets.wheel]
+include = ["maze_ing.py", "pars_ing.py", "render.py", "output_file_helpers.py", "a_maze_ing.py"]
+
+
+
+[project.scripts]
+mazegen = "a_maze_ing:main"
+
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/enp",
+    "/*.whl",
+    "/*.tar.gz"
+]

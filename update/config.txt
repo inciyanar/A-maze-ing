@@ -1,0 +1,6 @@
+WIDTH = 4
+HEIGHT = 4
+ENTRY= 0,0
+EXIT=3,2
+OUTPUT_FILE = output_file.txt
+PERFECT=True
