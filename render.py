@@ -1,5 +1,4 @@
 import random
-import os
 from maze_ing import Maze
 
 
@@ -47,7 +46,6 @@ class Render():
             show_path (bool): Visibility flag toggle for solution trail
             rendering blocks.
         """
-        os.system('cls' if os.name == 'nt' else 'clear')
         W_WALL: str = self.theme["WALL"]
         BG_ENTRY: str = self.theme["ENTRY"]
         BG_EXIT: str = self.theme["EXIT"]
@@ -76,20 +74,20 @@ class Render():
                     render_list[rx][ry] = BG_42
                 else:
                     render_list[rx][ry] = W_EMPTY
-                if cell.walls["NORTH"] == 0 and ry + 1 < buf_h:
-                    if (show_path
-                            and (x, y) in solutions
-                            and (x, y + 1) in solutions):
-                        render_list[rx][ry + 1] = BG_PATH
-                    else:
-                        render_list[rx][ry + 1] = W_EMPTY
-                if cell.walls["SOUTH"] == 0 and ry - 1 >= 0:
+                if cell.walls["NORTH"] == 0 and ry - 1 >= 0:
                     if (show_path
                             and (x, y) in solutions
                             and (x, y - 1) in solutions):
                         render_list[rx][ry - 1] = BG_PATH
                     else:
                         render_list[rx][ry - 1] = W_EMPTY
+                if cell.walls["SOUTH"] == 0 and ry + 1 < buf_h:
+                    if (show_path
+                            and (x, y) in solutions
+                            and (x, y + 1) in solutions):
+                        render_list[rx][ry + 1] = BG_PATH
+                    else:
+                        render_list[rx][ry + 1] = W_EMPTY
                 if cell.walls["WEST"] == 0 and rx - 1 >= 0:
                     if (show_path
                             and (x, y) in solutions
@@ -104,5 +102,5 @@ class Render():
                         render_list[rx + 1][ry] = BG_PATH
                     else:
                         render_list[rx + 1][ry] = W_EMPTY
-        for ry in reversed(range(buf_h)):
+        for ry in range(buf_h):
             print("".join([render_list[rx][ry] for rx in range(buf_w)]))

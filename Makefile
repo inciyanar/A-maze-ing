@@ -23,12 +23,13 @@ clean:
 	rm -rf __pycache__ .mypy_cache build dist *.egg-info
 
 fclean: clean
-	rm -f mazegen-*.whl mazegen-*.tar.gz output.txt
+	rm -f mazegen-*.whl mazegen-*.tar.gz
 
 package: fclean
 	$(PYTHON) -m build
 	mv dist/mazegen-*.whl .
 	mv dist/mazegen-*.tar.gz .
 	rm -rf dist *.egg-info
+
 
 .PHONY: install run debug clean fclean lint lint-strict package

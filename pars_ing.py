@@ -40,8 +40,7 @@ class ConfigParser:
                 key = splversion[0].strip().upper()
                 value = splversion[1].strip()
                 self.data[key] = value
-        for key, value in self.data.items():
-            print(f"{key} = {value}")
+
 
     def check_data(self) -> None:
         """

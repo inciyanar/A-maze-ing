@@ -23,7 +23,7 @@ def run_maze_render(maze: Maze, output_file: str) -> None:
         renderer.render(current_maze, show_path)
         if current_maze.warning_message:
             print(f"\n\033[33m{current_maze.warning_message}\033[0m")
-        print("\nA-Maze-ing======")
+        print("\n=== A-Maze-ing ===")
         print("1. Re-generate a new maze")
         print("2. Show/Hide path from entry to exit")
         print("3. Rotate maze colors")

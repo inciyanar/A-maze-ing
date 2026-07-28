@@ -87,10 +87,10 @@ class Maze():
         if self.width > 8 and self.height > 6:
             a: int = (self.width - 7) // 2
             b: int = (self.height - 5) // 2
-            coord: list[tuple[int, int]] = [(2, 0), (2, 1), (2, 2), (1, 2),
-                                            (0, 2), (0, 3), (0, 4), (4, 4),
-                                            (5, 4), (6, 4), (6, 3), (6, 2),
-                                            (5, 2), (4, 2), (4, 1), (4, 0),
+            coord: list[tuple[int, int]] = [(0, 0), (0, 1), (0, 2), (1, 2),
+                                            (2, 2), (2, 3), (2, 4), (4, 4),
+                                            (5, 4), (6, 4), (4, 3), (6, 2),
+                                            (5, 2), (4, 2), (6, 1), (4, 0),
                                             (4, 0), (5, 0), (6, 0)]
             for (x, y) in coord:
                 target_x = a + x
@@ -111,8 +111,8 @@ class Maze():
         grid rows/columns.
         """
         for x in range(self.width):
-            self.outer_walls.add(((x, 0), "SOUTH"))
-            self.outer_walls.add(((x, self.height - 1), "NORTH"))
+            self.outer_walls.add(((x, 0), "NORTH"))
+            self.outer_walls.add(((x, self.height - 1), "SOUTH"))
         for y in range(self.height):
             self.outer_walls.add(((0, y), "WEST"))
             self.outer_walls.add(((self.width - 1, y), "EAST"))
@@ -127,13 +127,13 @@ class Maze():
         x2, y2 = cell2_coord
         c1 = self.grid[x1][y1]
         c2 = self.grid[x2][y2]
-        if x1 == x2 and y2 == y1 + 1:
+        if x1 == x2 and y2 == y1 - 1:
             if (cell1_coord, "NORTH") in self.outer_walls:
                 if (cell2_coord, "SOUTH") in self.outer_walls:
                     return
             c1.walls["NORTH"] = 0
             c2.walls["SOUTH"] = 0
-        elif x1 == x2 and y2 == y1 - 1:
+        elif x1 == x2 and y2 == y1 + 1:
             if (cell1_coord, "SOUTH") in self.outer_walls:
                 if (cell2_coord, "NORTH") in self.outer_walls:
                     return
@@ -164,12 +164,12 @@ class Maze():
         c1 = self.grid[x1][y1]
         c2 = self.grid[x2][y2]
 
-        if x1 == x2 and y2 == y1 + 1:
+        if x1 == x2 and y2 == y1 - 1:
             if c1.walls["NORTH"] != 1 and c2.walls["SOUTH"] != 1:
                 c1.walls["NORTH"] = 1
                 c2.walls["SOUTH"] = 1
                 return True
-        elif x1 == x2 and y2 == y1 - 1:
+        elif x1 == x2 and y2 == y1 + 1:
             if c1.walls["SOUTH"] != 1 and c2.walls["NORTH"] != 1:
                 c1.walls["SOUTH"] = 1
                 c2.walls["NORTH"] = 1
@@ -197,7 +197,7 @@ class Maze():
         path = [start]
         visited = {start}
         current = start
-        moves = {"NORTH": (0, 1), "SOUTH": (0, -1), "EAST": (1, 0),
+        moves = {"NORTH": (0, -1), "SOUTH": (0, 1), "EAST": (1, 0),
                  "WEST": (-1, 0)}
         while current[0] != end[0] or current[1] != end[1]:
             curr_x, curr_y = current
@@ -236,7 +236,7 @@ class Maze():
         """
         directions = ["NORTH", "EAST", "SOUTH", "WEST"]
         moves = {
-            "NORTH": (0, 1), "SOUTH": (0, -1), "EAST": (1, 0), "WEST": (-1, 0)
+            "NORTH": (0, -1), "SOUTH": (0, 1), "EAST": (1, 0), "WEST": (-1, 0)
         }
         for x in range(1, self.width - 1):
             for y in range(1, self.height - 1):
@@ -285,11 +285,11 @@ class Maze():
         x, y = cell_coord
         c1 = self.grid[x][y]
         open_neighbors = []
-        if c1.walls.get("NORTH") == 0 and y + 1 < self.height:
-            open_neighbors.append((x, y + 1))
-
-        if c1.walls.get("SOUTH") == 0 and y - 1 >= 0:
+        if c1.walls.get("NORTH") == 0 and y - 1 >= 0:
             open_neighbors.append((x, y - 1))
+
+        if c1.walls.get("SOUTH") == 0 and y + 1 < self.height:
+            open_neighbors.append((x, y + 1))
 
         if c1.walls.get("EAST") == 0 and x + 1 < self.width:
             open_neighbors.append((x + 1, y))
@@ -381,35 +381,78 @@ class Maze():
     def fix_isolated_cells(self) -> bool:
         """
         Connects disconnected/isolated regions back to the main reachable grid.
+        Rebuilds the reachable set after every repair pass so that chains of
+        isolated cells are all correctly resolved.
         Returns:
             bool: True if structural repairs were made,
             False if everything is connected.
         """
-        start_coord = self.entry
-        visited = set()
-
-        tail = deque([start_coord])
-        visited.add(start_coord)
-        moves = {"NORTH": (0, 1), "SOUTH": (0, -1), "EAST": (1, 0),
+        moves = {"NORTH": (0, -1), "SOUTH": (0, 1), "EAST": (1, 0),
                  "WEST": (-1, 0)}
-        while tail:
-            curr_x, curr_y = tail.popleft()
-            curr_cell = self.grid[curr_x][curr_y]
-            for direction, (dx, dy) in moves.items():
-                if curr_cell.walls.get(direction, 1) == 0:
-                    nx, ny = curr_x + dx, curr_y + dy
 
-                    if 0 <= nx < self.width and 0 <= ny < self.height:
-                        if (nx, ny) not in visited:
-                            visited.add((nx, ny))
+        def build_visited() -> set:
+            """Entry — returns all currently reachable coords."""
+            visit: set = {self.entry}
+            tail: deque = deque([self.entry])
+            while tail:
+                cx, cy = tail.popleft()
+                for direction, (dx, dy) in moves.items():
+                    if self.grid[cx][cy].walls.get(direction, 1) == 0:
+                        nx, ny = cx + dx, cy + dy
+                        if (0 <= nx < self.width and 0 <= ny < self.height
+                                and (nx, ny) not in visit):
+                            visit.add((nx, ny))
                             tail.append((nx, ny))
+            return visit
+
         any_cell_fixed = False
+        while True:
+            visited = build_visited()
+            fixed_this_round = False
+            for x in range(self.width):
+                for y in range(self.height):
+                    current_coord = (x, y)
+                    if (current_coord not in visited and
+                            self.grid[x][y] not in self.ft_cell):
+                        directions = list(moves.keys())
+                        random.shuffle(directions)
+                        for direction in directions:
+                            dx, dy = moves[direction]
+                            next_x, next_y = x + dx, y + dy
+                            next_coord = (next_x, next_y)
+                            if (0 <= next_x < self.width and
+                                    0 <= next_y < self.height):
+                                if (next_coord in visited and
+                                   self.grid[next_x][next_y]
+                                        not in self.ft_cell):
+                                    self.destroy_wall(current_coord,
+                                                      next_coord)
+                                    visited.add(current_coord)
+                                    any_cell_fixed = True
+                                    fixed_this_round = True
+                                    break
+            if not fixed_this_round:
+                break
+        return any_cell_fixed
+
+    def fix_isolated_cells_nonper(self) -> None:
+        """
+        Connects disconnected/isolated regions back to the main reachable grid.
+        Rebuilds the reachable set after every repair pass so that chains of
+        isolated cells are all correctly resolved.
+        Returns:
+            bool: True if structural repairs were made,
+            False if everything is connected.
+        """
+        moves = {"NORTH": (0, -1), "SOUTH": (0, 1), "EAST": (1, 0),
+                 "WEST": (-1, 0)}
 
         for x in range(self.width):
             for y in range(self.height):
-                current_coord = (x, y)
-                if (current_coord not in visited and
-                        self.grid[x][y] not in self.ft_cell):
+                curr_cell = self.grid[x][y]
+                if (curr_cell.wallnbr == 7 or curr_cell.wallnbr == 11 or
+                curr_cell.wallnbr == 13 or curr_cell.wallnbr == 14 and 
+                (curr_cell.coordinate != self.entry or curr_cell.coordinate != self.exit)):
                     directions = list(moves.keys())
                     random.shuffle(directions)
                     for direction in directions:
@@ -418,13 +461,11 @@ class Maze():
                         next_coord = (next_x, next_y)
                         if (0 <= next_x < self.width and
                                 0 <= next_y < self.height):
-                            if (next_coord in visited and
-                               self.grid[next_x][next_y] not in self.ft_cell):
-                                self.destroy_wall(current_coord, next_coord)
-                                visited.add(current_coord)
-                                any_cell_fixed = True
-                                break
-        return any_cell_fixed
+                            if (self.grid[next_x][next_y]
+                                    not in self.ft_cell):
+                                self.destroy_wall(curr_cell.coordinate,
+                                                    next_coord)
+
 
     def checker_3x3(self) -> bool:
         """
@@ -467,16 +508,15 @@ def generate(maze: Maze) -> list[list[tuple[int, int]]]:
         raise ValueError("Error: Exit coordinates cannot be on the 42 sign.")
     maze.create_guaranteed_path()
     maze.random_broker()
+    # Always repair isolation from path carving / random_broker first.
+    # Without this, perfect_maker may see only one solution path and exit
+    # immediately, so fix_isolated_cells would never run.
+    maze.fix_isolated_cells()
     if maze.perfect is True:
         while maze.perfect_maker():
-            while True:
-                cells_fixed = maze.fix_isolated_cells()
-                if not cells_fixed:
-                    break
+            maze.fix_isolated_cells()
     if maze.perfect is False:
-        cells_fixed = True
-        while cells_fixed:
-            cells_fixed = maze.fix_isolated_cells()
+        maze.fix_isolated_cells_nonper()
     if maze.warning_message:
         print(maze.warning_message)
     return maze.find_solution_ways()

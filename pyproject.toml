@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "mazegen"
@@ -18,5 +18,18 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-[tool.setuptools]
-py-modules = ["maze_ing", "pars_ing", "render", "output_file_helpers"]
+[tool.hatch.build.targets.wheel]
+include = ["maze_ing.py", "pars_ing.py", "render.py", "output_file_helpers.py", "a_maze_ing.py"]
+
+
+
+[project.scripts]
+mazegen = "a_maze_ing:main"
+
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/enp",
+    "/*.whl",
+    "/*.tar.gz"
+]
