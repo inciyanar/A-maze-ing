@@ -91,16 +91,12 @@ class Maze():
                                             (2, 2), (2, 3), (2, 4), (4, 4),
                                             (5, 4), (6, 4), (4, 3), (6, 2),
                                             (5, 2), (4, 2), (6, 1), (4, 0),
-                                            (4, 0), (5, 0), (6, 0)]
+                                            (5, 0), (6, 0)]
             for (x, y) in coord:
                 target_x = a + x
                 target_y = b + y
                 if 0 <= target_x < self.width and 0 <= target_y < self.height:
                     self.ft_cell.append(self.grid[a + x][b + y])
-            if 0 <= a + 4 < self.width and 0 <= b + 3 < self.height:
-                self.destroy_wall((a + 4, b + 3), (a + 3, b + 3))
-            if 0 <= a + 7 < self.width and 0 <= b + 1 < self.height:
-                self.destroy_wall((a + 6, b + 1), (a + 7, b + 1))
         else:
             msg = "Error: Maze is too small to fit the 42 sign."
             self.warning_message = msg
