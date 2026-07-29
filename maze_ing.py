@@ -431,37 +431,71 @@ class Maze():
         return any_cell_fixed
 
     def fix_isolated_cells_nonper(self) -> bool:
-        """
-        Connects disconnected/isolated regions back to the main reachable grid.
-        Rebuilds the reachable set after every repair pass so that chains of
-        isolated cells are all correctly resolved.
-        Returns:
-            bool: True if structural repairs were made,
-            False if everything is connected.
-        """
-        moves = {"NORTH": (0, -1), "SOUTH": (0, 1), "EAST": (1, 0),
-                 "WEST": (-1, 0)}
+            moves = {"NORTH": (0, -1), "SOUTH": (0, 1), "EAST": (1, 0), "WEST": (-1, 0)}
+            opposite = {"NORTH": "SOUTH", "SOUTH": "NORTH", "EAST": "WEST", "WEST": "EAST"}
 
-        for x in range(self.width):
-            for y in range(self.height):
-                curr_cell = self.grid[x][y]
-                if (curr_cell.wallnbr in (7, 11, 13, 14)):
-                    if (curr_cell.coordinate not in (self.entry, self.exit)):
-                        directions = list(moves.keys())
-                        random.shuffle(directions)
-                        for direction in directions:
-                            dx, dy = moves[direction]
-                            next_x, next_y = x + dx, y + dy
-                            next_coord = (next_x, next_y)
-                            if (0 <= next_x < self.width and
-                                    0 <= next_y < self.height):
-                                if (self.grid[next_x][next_y]
-                                        not in self.ft_cell):
-                                    if (self.destroy_wall(curr_cell.coordinate,
-                                                      next_coord) == False):
-                                        return False
-        return True
+            for _ in range(10):
+                changes_made = False
 
+                for x in range(self.width):
+                    for y in range(self.height):
+                        curr_cell = self.grid[x][y]
+
+                        if curr_cell.coordinate in (self.entry, self.exit) or curr_cell in self.ft_cell:
+                            continue
+
+                        closed_walls = sum(1 for w in curr_cell.walls.values() if w == 1)
+
+                        # eğer çıkmaz sokaksa (3 veya 4 duvarı kapalı)
+                        if closed_walls >= 3:
+                            directions = list(moves.keys())
+                            random.shuffle(directions)
+
+                            fixed = False
+                            for direction in directions:
+                                # burda zaten açık olan bir yönü tekrar açmaya
+                                # çalışırsa kod devam eder ama dead end kalır
+                                # o yüzden 1 olan yönleri deniyoruz
+                                if curr_cell.walls[direction] != 1:
+                                    continue
+
+                                dx, dy = moves[direction]
+                                next_x, next_y = x + dx, y + dy
+
+                                if 0 <= next_x < self.width and 0 <= next_y < self.height:
+                                    neighbor_cell = self.grid[next_x][next_y]
+                                    if neighbor_cell not in self.ft_cell:
+                                        res = self.destroy_wall(curr_cell.coordinate, (next_x, next_y))
+                                        if res is not False:
+                                            changes_made = True
+                                            fixed = True
+                                            break  # Başarıyla açıldı, bu hücre için çık
+
+                            # burda 3x3 kuralını görmezden geliyoruz aslında
+                            # eğer dead end olacaksa
+                            if not fixed:
+                                for direction in directions:
+                                    dx, dy = moves[direction]
+                                    next_x, next_y = x + dx, y + dy
+
+                                    if not (0 <= next_x < self.width and
+                                            0 <= next_y < self.height):
+                                        continue
+                                    neighbor_cell = self.grid[next_x][next_y]
+                                    if neighbor_cell in self.ft_cell:
+                                        continue
+                                    if curr_cell.walls[direction] != 1:
+                                        continue
+
+                                    curr_cell.walls[direction] = 0
+                                    neighbor_cell.walls[opposite[direction]] = 0
+                                    changes_made = True
+                                    break
+
+                if not changes_made:
+                    break
+
+            return True
 
     def checker_3x3(self, x: int, y: int) -> bool:
         """
@@ -505,17 +539,15 @@ def generate(maze: Maze) -> list[list[tuple[int, int]]]:
         list: Discovered solutions after build completion.
     """
     maze.ft_write()
-    if any(cell.coordinate == maze.entry for cell in maze.ft_cell):
-        raise ValueError("Error: Entry coordinates cannot be on the 42 sign.")
-    if any(cell.coordinate == maze.exit for cell in maze.ft_cell):
-        raise ValueError("Error: Exit coordinates cannot be on the 42 sign.")
     maze.create_guaranteed_path()
     maze.random_broker()
     maze.fix_isolated_cells()
+
     if maze.perfect is True:
         while maze.perfect_maker():
             maze.fix_isolated_cells()
+
     if maze.perfect is False:
-        if maze.fix_isolated_cells_nonper() == False:
-            generate(maze)
+        maze.fix_isolated_cells_nonper()
+
     return maze.find_solution_ways()
