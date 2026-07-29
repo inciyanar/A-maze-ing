@@ -75,7 +75,51 @@ An imperfect maze means players can use different paths, loops, or shortcuts to 
 3. **Rotate maze colors:** Instantly cycles through different wall and background color themes.
 4. **Quit:** Safely exits the application.
 
+## Algorithms
 
+### DFS-based maze carving (randomized backtracker)
+
+Maze generation uses a randomized depth-first search to carve the initial path:
+starting from the entry cell, it repeatedly picks a random unvisited neighbor,
+breaks the wall between the current and next cell, and moves forward. When it
+hits a dead end (no unvisited neighbor available), it backtracks to the last
+cell that still has an unexplored direction, exactly like a stack-based DFS.
+
+We chose DFS for the carving step because it naturally produces long, winding
+corridors with few short loops by default — a good base structure for both of
+our target modes:
+- In **perfect mode**, DFS carving alone already yields a spanning tree of the
+  grid (every cell reachable, zero cycles), which is precisely the definition
+  of a perfect maze — no extra pruning is needed on the happy path.
+- In **playable mode**, that same tree becomes the skeleton onto which we
+  layer extra connections (braiding) to introduce loops and multiple routes,
+  without having to re-derive full connectivity from scratch.
+
+The backtracking behavior also fits our extra constraint of embedding the "42"
+sign: cells reserved for the sign are simply excluded from the neighbor
+selection, so the carving algorithm routes around them for free instead of
+needing a separate exclusion pass.
+
+### BFS-based solution pathfinding
+
+Finding the shortest path from entry to exit (and, more generally, checking
+whether the maze is still a single connected region) uses breadth-first
+search over the open passages.
+
+We chose BFS specifically because it explores level by level, so the first
+time it reaches the exit cell, that path is guaranteed to be the **shortest**
+one — which matters for two things:
+- The path written to the output file (as a direction string) should be a
+  genuine shortest route, not just *any* route DFS happens to stumble into.
+- Detecting whether more than one distinct route exists between entry and
+  exit (used to validate perfect vs. playable mode) is more predictable with
+  BFS's queue-based traversal than with a recursive DFS, which can revisit
+  the same region in inconsistent orders across runs.
+
+BFS also doubles as our general reachability check elsewhere in the project
+(e.g. verifying no cell is left isolated from the main region after braiding),
+since it explores the entire connected component from a single starting cell
+in one pass.
 
 ## Resources
 
@@ -99,3 +143,17 @@ In this project AI has been used for:
 - Generating tests
 - Fixing bugs (such as timeout errors)
 - Writing docstrings
+- Writing README
+
+## Roles of the members
+
+### edpolat
+- Parsing from the config file
+- Rendering
+- Package build
+- Configuration, Cell and Maze objects
+### incyanar: 
+- DFS algorithm of the maze
+- Pathfinding and generation algorithm
+- Configuration
+- Cell and Maze objects

@@ -45,7 +45,6 @@ class ConfigParser:
                 value = splversion[1].strip()
                 self.data[key] = value
 
-
     def check_data(self) -> None:
         """
         Runs type conversion checks, boundary assertions
@@ -88,11 +87,9 @@ class ConfigParser:
         if not (0 <= maze_exit[0] < width and 0 <= maze_exit[1] < height):
             raise ValueError("Configuration Error: EXIT coordinates are out "
                              "of maze bounds!")
-
         if entry == maze_exit:
             raise ValueError("Configuration Error: ENTRY and EXIT coordinates "
                              "cannot be the same!")
-
         perfect_str = str(self.data["PERFECT"]).upper()
         if perfect_str == "TRUE":
             validated_data["PERFECT"] = True

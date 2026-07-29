@@ -91,16 +91,12 @@ class Maze():
                                             (2, 2), (2, 3), (2, 4), (4, 4),
                                             (5, 4), (6, 4), (4, 3), (6, 2),
                                             (5, 2), (4, 2), (6, 1), (4, 0),
-                                            (5, 0), (6, 0), ]
+                                            (5, 0), (6, 0)]
             for (x, y) in coord:
                 target_x = a + x
                 target_y = b + y
                 if 0 <= target_x < self.width and 0 <= target_y < self.height:
                     self.ft_cell.append(self.grid[a + x][b + y])
-            if 0 <= a + 4 < self.width and 0 <= b + 3 < self.height:
-                self.destroy_wall((a + 4, b + 3), (a + 3, b + 3))
-            if 0 <= a + 7 < self.width and 0 <= b + 1 < self.height:
-                self.destroy_wall((a + 6, b + 1), (a + 7, b + 1))
         else:
             msg = "Error: Maze is too small to fit the 42 sign."
             self.warning_message = msg
@@ -118,7 +114,7 @@ class Maze():
             self.outer_walls.add(((self.width - 1, y), "EAST"))
 
     def destroy_wall(self, cell1_coord: tuple[int, int],
-                     cell2_coord: tuple[int, int]) -> None:
+                     cell2_coord: tuple[int, int]) -> bool:
         """
         Breaks down shared walls between two adjacent cells if they
         are not outer boundaries.
@@ -130,27 +126,31 @@ class Maze():
         if x1 == x2 and y2 == y1 - 1:
             if (cell1_coord, "NORTH") in self.outer_walls:
                 if (cell2_coord, "SOUTH") in self.outer_walls:
-                    return
+                    return True
             c1.walls["NORTH"] = 0
             c2.walls["SOUTH"] = 0
         elif x1 == x2 and y2 == y1 + 1:
             if (cell1_coord, "SOUTH") in self.outer_walls:
                 if (cell2_coord, "NORTH") in self.outer_walls:
-                    return
+                    return True
             c1.walls["SOUTH"] = 0
             c2.walls["NORTH"] = 0
         elif y1 == y2 and x2 == x1 + 1:
             if (cell1_coord, "EAST") in self.outer_walls:
                 if (cell2_coord, "WEST") in self.outer_walls:
-                    return
+                    return True
             c1.walls["EAST"] = 0
             c2.walls["WEST"] = 0
         elif y1 == y2 and x2 == x1 - 1:
             if (cell1_coord, "WEST") in self.outer_walls:
                 if (cell2_coord, "EAST") in self.outer_walls:
-                    return
+                    return True
             c1.walls["WEST"] = 0
             c2.walls["EAST"] = 0
+        if self.checker_3x3(x1, y1):
+            self.build_wall((x1, y1), (x2, y2))
+            return False
+        return True
 
     def build_wall(self, cell1_coord: tuple[int, int],
                    cell2_coord: tuple[int, int]) -> bool:
@@ -256,6 +256,7 @@ class Maze():
                                 0 <= next_y < self.height):
                             next_cell = self.grid[next_x][next_y]
                             if next_cell not in self.ft_cell:
+
                                 self.destroy_wall((x, y), (next_x, next_y))
                                 start_x_min = max(0, x - 2)
                                 start_x_max = min(self.width - 3, x)
@@ -338,44 +339,38 @@ class Maze():
             bool: True if alternative paths were sealed,
             False if already perfect.
         """
+        def reachable_count() -> int:
+            seen = {self.entry}
+            queue = deque([self.entry])
+            while queue:
+                cx, cy = queue.popleft()
+                for nxt in self.get_open_neighbors((cx, cy)):
+                    if nxt not in seen:
+                        seen.add(nxt)
+                        queue.append(nxt)
+            return len(seen)
+
         wall_built = False
-        while True:
-            all_paths = self.find_solution_ways()
-            if len(all_paths) == 1:
-                break
-            all_paths.sort(key=len)
-            main_path = all_paths[0]
-            main_edges = set()
-            for i in range(len(main_path) - 1):
-                edge = tuple(sorted([main_path[i], main_path[i+1]]))
-                main_edges.add(edge)
-            this_turn_built = False
-            for path in all_paths[1:]:
-                for i in range(len(path) - 1):
-                    curr_cell = path[i]
-                    next_cell = path[i+1]
-                    edge = tuple(sorted([curr_cell, next_cell]))
-                    if edge not in main_edges:
-                        attempt = 0
-                        while True:
-                            attempt += 1
-                            if attempt > 50:
-                                k = i
-                            else:
-                                k = random.randint(i, len(path) - 2)
-                            curr_cell = path[k]
-                            next_cell = path[k + 1]
-                            edge = tuple(sorted([curr_cell, next_cell]))
-                            if edge not in main_edges:
-                                if (self.build_wall(curr_cell, next_cell)
-                                        is True):
-                                    this_turn_built = True
-                                    wall_built = True
-                                    break
-                    if this_turn_built:
-                        break
-                if this_turn_built:
-                    break
+        baseline = reachable_count()
+        moves = {"EAST": (1, 0), "SOUTH": (0, 1)}
+        for x in range(self.width):
+            for y in range(self.height):
+                cell = self.grid[x][y]
+                if cell in self.ft_cell:
+                    continue
+                for direction, (dx, dy) in moves.items():
+                    if cell.walls[direction] != 0:
+                        continue
+                    nx, ny = x + dx, y + dy
+                    if not (0 <= nx < self.width and 0 <= ny < self.height):
+                        continue
+                    if self.grid[nx][ny] in self.ft_cell:
+                        continue
+                    if self.build_wall((x, y), (nx, ny)):
+                        if reachable_count() == baseline:
+                            wall_built = True
+                        else:
+                            self.destroy_wall((x, y), (nx, ny))
         return wall_built
 
     def fix_isolated_cells(self) -> bool:
@@ -390,10 +385,10 @@ class Maze():
         moves = {"NORTH": (0, -1), "SOUTH": (0, 1), "EAST": (1, 0),
                  "WEST": (-1, 0)}
 
-        def build_visited() -> set:
+        def build_visited() -> set[tuple[int, int]]:
             """Entry — returns all currently reachable coords."""
-            visit: set = {self.entry}
-            tail: deque = deque([self.entry])
+            visit: set[tuple[int, int]] = {self.entry}
+            tail: deque[tuple[int, int]] = deque([self.entry])
             while tail:
                 cx, cy = tail.popleft()
                 for direction, (dx, dy) in moves.items():
@@ -435,7 +430,7 @@ class Maze():
                 break
         return any_cell_fixed
 
-    def fix_isolated_cells_nonper(self) -> None:
+    def fix_isolated_cells_nonper(self) -> bool:
         """
         Connects disconnected/isolated regions back to the main reachable grid.
         Rebuilds the reachable set after every repair pass so that chains of
@@ -450,46 +445,57 @@ class Maze():
         for x in range(self.width):
             for y in range(self.height):
                 curr_cell = self.grid[x][y]
-                if (curr_cell.wallnbr in (7, 11, 13, 14) and
-                    curr_cell.coordinate not in (self.entry, self.exit)):
-                    directions = list(moves.keys())
-                    random.shuffle(directions)
-                    for direction in directions:
-                        dx, dy = moves[direction]
-                        next_x, next_y = x + dx, y + dy
-                        next_coord = (next_x, next_y)
-                        if (0 <= next_x < self.width and
-                                0 <= next_y < self.height):
-                            if (self.grid[next_x][next_y]
-                                    not in self.ft_cell):
-                                self.destroy_wall(curr_cell.coordinate,
-                                                    next_coord)
-
-
-    def checker_3x3(self,start_x: int, start_y: int) -> bool:
-        """
-        Validates structural conditions inside a 3x3 local cluster starting at
-        entry coordinates.
-        Returns:
-            bool: Validation results.
-        """
-        if start_x < 0 or start_y < 0:
-            return False
-        if start_x + 2 >= self.width or start_y + 2 >= self.height:
-            return False
-        for i in range(3):
-            for j in range(3):
-                curr_cell = self.grid[start_x + i][start_y + j]
-                if j < 2 and curr_cell.walls["NORTH"] == 1:
-                    return False
-                if i < 2 and curr_cell.walls["EAST"] == 1:
-                    return False
-                if j > 2 and curr_cell.walls["SOUTH"] == 1:
-                    return False
-                if i > 2 and curr_cell.walls["WEST"] == 1:
-                    return False
+                if (curr_cell.wallnbr in (7, 11, 13, 14)):
+                    if (curr_cell.coordinate not in (self.entry, self.exit)):
+                        directions = list(moves.keys())
+                        random.shuffle(directions)
+                        for direction in directions:
+                            dx, dy = moves[direction]
+                            next_x, next_y = x + dx, y + dy
+                            next_coord = (next_x, next_y)
+                            if (0 <= next_x < self.width and
+                                    0 <= next_y < self.height):
+                                if (self.grid[next_x][next_y]
+                                        not in self.ft_cell):
+                                    if (self.destroy_wall(curr_cell.coordinate,
+                                                      next_coord) == False):
+                                        return False
         return True
 
+
+    def checker_3x3(self, x: int, y: int) -> bool:
+        """
+        Checks if the given cell (x, y) is part of ANY 3x3 fully open
+        empty block by testing all possible 9 relative positions
+        where (x, y) can reside inside a 3x3 grid.
+        """
+        for dx in range(3):
+            for dy in range(3):
+                start_x = x - dx
+                start_y = y - dy
+                if start_x < 0 or start_y < 0:
+                    continue
+                if start_x + 2 >= self.width or start_y + 2 >= self.height:
+                    continue
+                open_internal_walls = 0
+                total_internal_walls = 0
+                for i in range(3):
+                    for j in range(3):
+                        curr_x = start_x + i
+                        curr_y = start_y + j
+                        cell = self.grid[curr_x][curr_y]
+
+                        if i < 2:
+                            total_internal_walls += 1
+                            if cell.walls["EAST"] == 0:
+                                open_internal_walls += 1
+                        if j < 2:
+                            total_internal_walls += 1
+                            if cell.walls["SOUTH"] == 0:
+                                open_internal_walls += 1
+                if total_internal_walls > 0 and (open_internal_walls / total_internal_walls) > 0.8:
+                    return True
+        return False
 
 def generate(maze: Maze) -> list[list[tuple[int, int]]]:
     """
@@ -505,13 +511,11 @@ def generate(maze: Maze) -> list[list[tuple[int, int]]]:
         raise ValueError("Error: Exit coordinates cannot be on the 42 sign.")
     maze.create_guaranteed_path()
     maze.random_broker()
-    # Always repair isolation from path carving / random_broker first.
-    # Without this, perfect_maker may see only one solution path and exit
-    # immediately, so fix_isolated_cells would never run.
     maze.fix_isolated_cells()
     if maze.perfect is True:
         while maze.perfect_maker():
             maze.fix_isolated_cells()
     if maze.perfect is False:
-        maze.fix_isolated_cells_nonper()
+        if maze.fix_isolated_cells_nonper() == False:
+            generate(maze)
     return maze.find_solution_ways()
