@@ -42,10 +42,25 @@ def run_maze_render(maze: Maze, output_file: str) -> None:
                                 perfect=current_maze.perfect,
                                 seed=next_seed
                             )
-            final_paths = generate(current_maze)
-            while not final_paths:
+            final_paths = []
+            max_attempts = 50
+            attempts = 0
+            while not final_paths and attempts < max_attempts:
                 final_paths = generate(current_maze)
-            write_output_file(output_file, current_maze, final_paths[0])
+                attempts +=1
+
+            if not final_paths:
+                raise RuntimeError(
+                    "Error: Could not generate a valid maze with a path between entry and exit "
+                    "after maximum attempts. Try increasing the maze dimensions."
+                    )
+            try:
+                write_output_file(output_file, current_maze, final_paths[0])
+            except PermissionError:
+                print(f"\n[!] Error: Permission denied to write to '{output_file}'.")
+            except OSError as e:
+                print(f"\n[!] Error: An I/O error occurred while saving the file: {e}")
+
         elif choice == "2":
             show_path = not show_path
         elif choice == "3":

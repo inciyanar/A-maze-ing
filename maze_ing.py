@@ -91,12 +91,16 @@ class Maze():
                                             (2, 2), (2, 3), (2, 4), (4, 4),
                                             (5, 4), (6, 4), (4, 3), (6, 2),
                                             (5, 2), (4, 2), (6, 1), (4, 0),
-                                            (5, 0), (6, 0)]
+                                            (5, 0), (6, 0), ]
             for (x, y) in coord:
                 target_x = a + x
                 target_y = b + y
                 if 0 <= target_x < self.width and 0 <= target_y < self.height:
                     self.ft_cell.append(self.grid[a + x][b + y])
+            if 0 <= a + 4 < self.width and 0 <= b + 3 < self.height:
+                self.destroy_wall((a + 4, b + 3), (a + 3, b + 3))
+            if 0 <= a + 7 < self.width and 0 <= b + 1 < self.height:
+                self.destroy_wall((a + 6, b + 1), (a + 7, b + 1))
         else:
             msg = "Error: Maze is too small to fit the 42 sign."
             self.warning_message = msg
@@ -261,7 +265,7 @@ class Maze():
                                 for sx in range(start_x_min, start_x_max + 1):
                                     for sy in range(start_y_min,
                                                     start_y_max + 1):
-                                        if self.checker_3x3():
+                                        if self.checker_3x3(sx, sy):
                                             illegal_area_found = True
                                             break
                                     if illegal_area_found:
@@ -446,9 +450,8 @@ class Maze():
         for x in range(self.width):
             for y in range(self.height):
                 curr_cell = self.grid[x][y]
-                if (curr_cell.wallnbr == 7 or curr_cell.wallnbr == 11 or
-                curr_cell.wallnbr == 13 or curr_cell.wallnbr == 14 and 
-                (curr_cell.coordinate != self.entry or curr_cell.coordinate != self.exit)):
+                if (curr_cell.wallnbr in (7, 11, 13, 14) and
+                    curr_cell.coordinate not in (self.entry, self.exit)):
                     directions = list(moves.keys())
                     random.shuffle(directions)
                     for direction in directions:
@@ -463,15 +466,13 @@ class Maze():
                                                     next_coord)
 
 
-    def checker_3x3(self) -> bool:
+    def checker_3x3(self,start_x: int, start_y: int) -> bool:
         """
         Validates structural conditions inside a 3x3 local cluster starting at
         entry coordinates.
         Returns:
             bool: Validation results.
         """
-        start_x = self.entry[0]
-        start_y = self.entry[1]
         if start_x < 0 or start_y < 0:
             return False
         if start_x + 2 >= self.width or start_y + 2 >= self.height:
@@ -513,6 +514,4 @@ def generate(maze: Maze) -> list[list[tuple[int, int]]]:
             maze.fix_isolated_cells()
     if maze.perfect is False:
         maze.fix_isolated_cells_nonper()
-    if maze.warning_message:
-        print(maze.warning_message)
     return maze.find_solution_ways()

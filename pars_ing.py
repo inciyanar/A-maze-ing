@@ -32,6 +32,10 @@ class ConfigParser:
                 item = item.strip()
                 if not item or item[0] == '#':
                     continue
+                if '#' in item:
+                    item = item.split('#')[0].strip()
+                if not item:
+                    continue
                 if "=" not in item:
                     raise ValueError(
                         f"Value Error in {self.config_path}: Invalid syntax "
@@ -84,6 +88,10 @@ class ConfigParser:
         if not (0 <= maze_exit[0] < width and 0 <= maze_exit[1] < height):
             raise ValueError("Configuration Error: EXIT coordinates are out "
                              "of maze bounds!")
+
+        if entry == maze_exit:
+            raise ValueError("Configuration Error: ENTRY and EXIT coordinates "
+                             "cannot be the same!")
 
         perfect_str = str(self.data["PERFECT"]).upper()
         if perfect_str == "TRUE":
