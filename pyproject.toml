@@ -7,6 +7,7 @@ name = "mazegen"
 version = "1.0.0"
 description = "42 A-Maze-ing Project by incyanar & edpolat"
 readme = "README.md"
+license = {file = "LICENSE.md"}
 requires-python = ">=3.10"
 authors = [
     {name = "Eda Nur Polat", email = "edanurpolat03@gmail.com"}, 
@@ -16,6 +17,7 @@ keywords = ["maze", "42", "perfect-maze"]
 classifiers = [
     "Programming Language :: Python :: 3.10",
     "Operating System :: OS Independent",
+    "License :: OSI Approved :: MIT License",
 ]
 
 [tool.hatch.build.targets.wheel]

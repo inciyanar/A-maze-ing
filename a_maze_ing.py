@@ -89,6 +89,16 @@ def main() -> None:
         seed_val = parser.data.get("SEED")
         maze = Maze(width=width, height=height, entry=entry, exit=maze_exit,
                     perfect=perfect, seed=seed_val)
+        if maze.grid[entry[0]][entry[1]] in maze.ft_cell:
+            raise ValueError(
+                "Configuration Error: ENTRY coordinates fall on a '42' "
+                "sign cell, which must stay fully closed."
+            )
+        if maze.grid[maze_exit[0]][maze_exit[1]] in maze.ft_cell:
+            raise ValueError(
+                "Configuration Error: EXIT coordinates fall on a '42' "
+                "sign cell, which must stay fully closed."
+            )
         final_paths = generate(maze)
 
         while not final_paths:

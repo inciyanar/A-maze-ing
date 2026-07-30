@@ -1,0 +1,24 @@
+# Python bytecode / caches
+__pycache__/
+*.pyc
+*.pyo
+.mypy_cache/
+.pytest_cache/
+
+# Build artifacts (rebuilt from source with `python3 -m build`;
+# the shipped mazegen-1.0.0-py3-none-any.whl / .tar.gz at the repo root
+# are intentionally NOT ignored, since the subject requires them there)
+/dist/
+/build/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+enp/
+
+# Editor / OS junk
+.DS_Store
+.vscode/
+.idea/

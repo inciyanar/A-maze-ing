@@ -84,6 +84,7 @@ class Maze():
         the grid. Triggers a warning message if the maze dimensions
         are too tight to fit it.
         """
+        self.ft_cell = []
         if self.width > 8 and self.height > 6:
             a: int = (self.width - 7) // 2
             b: int = (self.height - 5) // 2
@@ -353,6 +354,7 @@ class Maze():
         wall_built = False
         baseline = reachable_count()
         moves = {"EAST": (1, 0), "SOUTH": (0, 1)}
+        opposite = {"EAST": "WEST", "SOUTH": "NORTH"}
         for x in range(self.width):
             for y in range(self.height):
                 cell = self.grid[x][y]
@@ -370,7 +372,17 @@ class Maze():
                         if reachable_count() == baseline:
                             wall_built = True
                         else:
-                            self.destroy_wall((x, y), (nx, ny))
+                            # Undo the build_wall() above directly. Do NOT
+                            # call destroy_wall() here: it re-runs the 3x3
+                            # open-area check on (x, y) and, if that check
+                            # trips, silently rebuilds the wall and returns
+                            # False instead of reverting it — which would
+                            # leave this cell permanently disconnected from
+                            # the entry even though we detected exactly that
+                            # and tried to undo it.
+                            neighbor = self.grid[nx][ny]
+                            cell.walls[direction] = 0
+                            neighbor.walls[opposite[direction]] = 0
         return wall_built
 
     def fix_isolated_cells(self) -> bool:
@@ -420,82 +432,131 @@ class Maze():
                                 if (next_coord in visited and
                                    self.grid[next_x][next_y]
                                         not in self.ft_cell):
-                                    self.destroy_wall(current_coord,
-                                                      next_coord)
-                                    visited.add(current_coord)
-                                    any_cell_fixed = True
-                                    fixed_this_round = True
-                                    break
+                                    if self.destroy_wall(current_coord,
+                                                         next_coord):
+                                        visited.add(current_coord)
+                                        any_cell_fixed = True
+                                        fixed_this_round = True
+                                        break
+            if not fixed_this_round:
+                break
+
+        # Safety net: destroy_wall() can refuse to open a passage if doing
+        # so would create an illegal 3x3 open area (checker_3x3). Without
+        # checking its return value, the loop above could count a blocked
+        # move as a "fix" and either leave a cell isolated or spin forever
+        # retrying the same blocked move. Full connectivity is a hard
+        # requirement, so force a connection here as a last resort even if
+        # it means allowing a slightly wider open area for that passage.
+        opposite = {"NORTH": "SOUTH", "SOUTH": "NORTH",
+                    "EAST": "WEST", "WEST": "EAST"}
+        while True:
+            visited = build_visited()
+            fixed_this_round = False
+            for x in range(self.width):
+                for y in range(self.height):
+                    current_coord = (x, y)
+                    if (current_coord not in visited and
+                            self.grid[x][y] not in self.ft_cell):
+                        directions = list(moves.keys())
+                        random.shuffle(directions)
+                        for direction in directions:
+                            dx, dy = moves[direction]
+                            next_x, next_y = x + dx, y + dy
+                            next_coord = (next_x, next_y)
+                            if (0 <= next_x < self.width and
+                                    0 <= next_y < self.height and
+                                    next_coord in visited and
+                                    self.grid[next_x][next_y]
+                                    not in self.ft_cell):
+                                c1 = self.grid[x][y]
+                                c2 = self.grid[next_x][next_y]
+                                c1.walls[direction] = 0
+                                c2.walls[opposite[direction]] = 0
+                                visited.add(current_coord)
+                                any_cell_fixed = True
+                                fixed_this_round = True
+                                break
             if not fixed_this_round:
                 break
         return any_cell_fixed
 
     def fix_isolated_cells_nonper(self) -> bool:
-            moves = {"NORTH": (0, -1), "SOUTH": (0, 1), "EAST": (1, 0), "WEST": (-1, 0)}
-            opposite = {"NORTH": "SOUTH", "SOUTH": "NORTH", "EAST": "WEST", "WEST": "EAST"}
+        moves = {"NORTH": (0, -1), "SOUTH": (0, 1),
+                 "EAST": (1, 0), "WEST": (-1, 0)}
+        opposite = {"NORTH": "SOUTH", "SOUTH": "NORTH",
+                    "EAST": "WEST", "WEST": "EAST"}
 
-            for _ in range(10):
-                changes_made = False
+        for _ in range(10):
+            changes_made = False
 
-                for x in range(self.width):
-                    for y in range(self.height):
-                        curr_cell = self.grid[x][y]
+            for x in range(self.width):
+                for y in range(self.height):
+                    curr_cell = self.grid[x][y]
 
-                        if curr_cell.coordinate in (self.entry, self.exit) or curr_cell in self.ft_cell:
-                            continue
+                    if (
+                        curr_cell.coordinate in (self.entry, self.exit)
+                        or curr_cell in self.ft_cell
+                    ):
+                        continue
 
-                        closed_walls = sum(1 for w in curr_cell.walls.values() if w == 1)
+                    closed_walls = sum(
+                        1 for w in curr_cell.walls.values() if w == 1)
 
-                        # eğer çıkmaz sokaksa (3 veya 4 duvarı kapalı)
-                        if closed_walls >= 3:
-                            directions = list(moves.keys())
-                            random.shuffle(directions)
+                    # eğer çıkmaz sokaksa (3 veya 4 duvarı kapalı)
+                    if closed_walls >= 3:
+                        directions = list(moves.keys())
+                        random.shuffle(directions)
 
-                            fixed = False
+                        fixed = False
+                        for direction in directions:
+                            # burda zaten açık olan bir yönü tekrar açmaya
+                            # çalışırsa kod devam eder ama dead end kalır
+                            # o yüzden 1 olan yönleri deniyoruz
+                            if curr_cell.walls[direction] != 1:
+                                continue
+
+                            dx, dy = moves[direction]
+                            next_x, next_y = x + dx, y + dy
+
+                            if (
+                                0 <= next_x < self.width
+                                and 0 <= next_y < self.height
+                            ):
+                                neighbor_cell = self.grid[next_x][next_y]
+                                if neighbor_cell not in self.ft_cell:
+                                    res = self.destroy_wall(
+                                        curr_cell.coordinate, (next_x, next_y))
+                                    if res is not False:
+                                        changes_made = True
+                                        fixed = True
+                                        break  # Başarılı, bu hücre için çık
+
+                        # burda 3x3 kuralını görmezden geliyoruz aslında
+                        # eğer dead end olacaksa
+                        if not fixed:
                             for direction in directions:
-                                # burda zaten açık olan bir yönü tekrar açmaya
-                                # çalışırsa kod devam eder ama dead end kalır
-                                # o yüzden 1 olan yönleri deniyoruz
-                                if curr_cell.walls[direction] != 1:
-                                    continue
-
                                 dx, dy = moves[direction]
                                 next_x, next_y = x + dx, y + dy
 
-                                if 0 <= next_x < self.width and 0 <= next_y < self.height:
-                                    neighbor_cell = self.grid[next_x][next_y]
-                                    if neighbor_cell not in self.ft_cell:
-                                        res = self.destroy_wall(curr_cell.coordinate, (next_x, next_y))
-                                        if res is not False:
-                                            changes_made = True
-                                            fixed = True
-                                            break  # Başarıyla açıldı, bu hücre için çık
+                                if not (0 <= next_x < self.width and
+                                        0 <= next_y < self.height):
+                                    continue
+                                neighbor_cell = self.grid[next_x][next_y]
+                                if neighbor_cell in self.ft_cell:
+                                    continue
+                                if curr_cell.walls[direction] != 1:
+                                    continue
 
-                            # burda 3x3 kuralını görmezden geliyoruz aslında
-                            # eğer dead end olacaksa
-                            if not fixed:
-                                for direction in directions:
-                                    dx, dy = moves[direction]
-                                    next_x, next_y = x + dx, y + dy
+                                curr_cell.walls[direction] = 0
+                                neighbor_cell.walls[opposite[direction]] = 0
+                                changes_made = True
+                                break
 
-                                    if not (0 <= next_x < self.width and
-                                            0 <= next_y < self.height):
-                                        continue
-                                    neighbor_cell = self.grid[next_x][next_y]
-                                    if neighbor_cell in self.ft_cell:
-                                        continue
-                                    if curr_cell.walls[direction] != 1:
-                                        continue
+            if not changes_made:
+                break
 
-                                    curr_cell.walls[direction] = 0
-                                    neighbor_cell.walls[opposite[direction]] = 0
-                                    changes_made = True
-                                    break
-
-                if not changes_made:
-                    break
-
-            return True
+        return True
 
     def checker_3x3(self, x: int, y: int) -> bool:
         """
@@ -527,9 +588,11 @@ class Maze():
                             total_internal_walls += 1
                             if cell.walls["SOUTH"] == 0:
                                 open_internal_walls += 1
-                if total_internal_walls > 0 and (open_internal_walls / total_internal_walls) > 0.8:
+                rate = open_internal_walls / total_internal_walls
+                if total_internal_walls > 0 and rate > 0.8:
                     return True
         return False
+
 
 def generate(maze: Maze) -> list[list[tuple[int, int]]]:
     """

@@ -75,30 +75,115 @@ An imperfect maze means players can use different paths, loops, or shortcuts to 
 3. **Rotate maze colors:** Instantly cycles through different wall and background color themes.
 4. **Quit:** Safely exits the application.
 
+## Using the Maze Generator as a Library
+
+The maze generation logic is reusable outside of this CLI project: it lives in
+its own standalone module, `maze_ing.py`, and is published as an installable
+package named `mazegen` (see `mazegen-1.0.0-py3-none-any.whl` /
+`mazegen-1.0.0.tar.gz` at the root of this repository, built from
+`pyproject.toml`).
+
+### Install it in another project
+
+```bash
+pip install mazegen-1.0.0-py3-none-any.whl
+```
+
+### Basic example
+
+```python
+from maze_ing import Maze, generate
+
+# Instantiate a maze
+maze = Maze(width=20, height=20, entry=(0, 0), exit=(19, 19), perfect=True)
+
+# Build the walls and get the list of solution paths
+paths = generate(maze)
+```
+
+### Custom parameters (size, seed, mode)
+
+The `Maze` constructor accepts:
+
+- `width`, `height` (`int`): the grid size, in cells.
+- `entry`, `exit` (`tuple[int, int]`): the `(x, y)` start/end coordinates.
+- `perfect` (`bool`): `True` for a single-path perfect maze, `False` for a
+  Pac-Man-style playable board with loops.
+- `seed` (`int`, optional): pass the same seed to get the exact same maze
+  again (reproducibility).
+
+```python
+maze = Maze(width=12, height=9, entry=(0, 0), exit=(11, 8),
+            perfect=False, seed=42)
+paths = generate(maze)
+```
+
+### Accessing the generated structure and the solution
+
+`generate()` mutates `maze.grid` in place and returns every solution path it
+found (entry to exit). The structure is not the same format as the output
+file — it is a live grid of `Cell` objects you can inspect directly:
+
+```python
+paths = generate(maze)
+
+# Access at least a solution: a list of (x, y) coordinates, entry to exit
+shortest_solution = paths[0]
+print(shortest_solution)
+
+# Access the generated structure: one Cell object per (x, y)
+cell = maze.grid[0][0]
+print(cell.walls)            # e.g. {'NORTH': 1, 'EAST': 0, 'SOUTH': 1, 'WEST': 0}
+print(cell.get_hex_value())  # hexadecimal wall encoding for that single cell
+```
+
+`1` means the wall on that side is closed, `0` means it is open — matching
+the bit layout described in the "Configuration file format" section below.
+
 ## Algorithms
 
-### DFS-based maze carving (randomized backtracker)
+### Guaranteed-path carving + randomized wall braiding
 
-Maze generation uses a randomized depth-first search to carve the initial path:
-starting from the entry cell, it repeatedly picks a random unvisited neighbor,
-breaks the wall between the current and next cell, and moves forward. When it
-hits a dead end (no unvisited neighbor available), it backtracks to the last
-cell that still has an unexplored direction, exactly like a stack-based DFS.
+Maze generation does **not** use a single full depth-first spanning tree over
+the whole grid. Instead it combines two separate randomized passes:
 
-We chose DFS for the carving step because it naturally produces long, winding
-corridors with few short loops by default — a good base structure for both of
-our target modes:
-- In **perfect mode**, DFS carving alone already yields a spanning tree of the
-  grid (every cell reachable, zero cycles), which is precisely the definition
-  of a perfect maze — no extra pruning is needed on the happy path.
-- In **playable mode**, that same tree becomes the skeleton onto which we
-  layer extra connections (braiding) to introduce loops and multiple routes,
-  without having to re-derive full connectivity from scratch.
+1. **`create_guaranteed_path()`** — a randomized walk from the entry cell
+   towards the exit cell only. It repeatedly picks a random unvisited
+   neighbor and breaks the wall to it; when it gets stuck (no unvisited
+   neighbor left), it backtracks to the previous cell on that same path and
+   tries another direction, stack-style, exactly like a local DFS — but it
+   stops as soon as it reaches the exit, so it only carves *one* path, not
+   every cell in the grid.
+2. **`random_broker()`** — afterwards scans every interior cell independently
+   and randomly breaks 0–2 of its walls (each candidate break is checked
+   against the "no 3x3 open area" rule via `checker_3x3` and reverted if it
+   would violate it). This is what actually gives the rest of the grid its
+   structure, its loops, and its branching — the guaranteed path from step 1
+   is just one thread inside it.
+3. **`fix_isolated_cells()`** then BFS-repairs any cell `random_broker()`
+   happened to leave stranded, so the grid is fully connected before the
+   perfect/playable branch runs.
 
-The backtracking behavior also fits our extra constraint of embedding the "42"
-sign: cells reserved for the sign are simply excluded from the neighbor
-selection, so the carving algorithm routes around them for free instead of
-needing a separate exclusion pass.
+We chose this two-phase approach over a single DFS spanning tree because it
+decouples the two things the subject asks for independently:
+- **Guaranteed solvability**, satisfied unconditionally by step 1 before
+  anything else touches the grid — the entry→exit path exists regardless of
+  what the braiding step does afterward.
+- **Loop density and dead-end control**, handled by step 2 scanning *every*
+  cell with an independent random chance, which gives a more even spread of
+  loops across the whole grid than a classic DFS carve (which tends to
+  produce one dominant winding corridor with sparse side branches). That
+  matters directly for the playable (Pac-Man) mode's "at least two
+  independent routes, rare dead-ends" requirement.
+- Both steps in this pipeline (`create_guaranteed_path()` and
+  `random_broker()`) simply skip any cell reserved for the "42" sign, so the
+  sign is preserved for free without a separate exclusion pass.
+
+Depending on `PERFECT`, the pipeline then either removes the extra loops
+(`perfect_maker()`, for `PERFECT=True`) or actively opens up remaining
+dead-ends (`fix_isolated_cells_nonper()`, for the default `PERFECT=False`
+Pac-Man mode) — see the "Algorithm Explaination" section above for the exact
+step-by-step order.
 
 ### BFS-based solution pathfinding
 
@@ -157,3 +242,11 @@ In this project AI has been used for:
 - Pathfinding and generation algorithm
 - Configuration
 - Cell and Maze objects
+
+## License
+
+This project is distributed under the MIT License — see [LICENSE.md](LICENSE.md)
+at the root of this repository for the full text. MIT was chosen specifically
+because the maze generator (`maze_ing.py`, packaged as `mazegen`) is meant to
+be reused: it explicitly allows any later project to import, modify, and
+redistribute this code, as long as the original copyright notice is kept.
